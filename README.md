@@ -451,3 +451,42 @@ Freely reusable for historical, genealogical, administrative, and archival proje
 **Questions?** Review the appropriate documentation file above, or examine the code comments in the scripts.
 
 **Ready to get started?** Jump to the "Quick Start" section above! 🚀
+
+
+## Gender Inference & Data Completeness
+
+### Automatic Gender Inference
+
+The build script automatically infers missing gender for persons based on genealogical relations:
+
+- **Explicit gender:** Person has `gender` field in metadata (GLOSSARIO) → `gender_source: "explicit"`
+- **Inferred gender:** Gender determined from relations (e.g., "filha de", "pai de") → `gender_source: "inferred"`
+
+### How It Works
+
+1. **Configuration:** Each project defines gender keywords in `gender_rules.json`:
+   ```json
+   {
+     "gender_inference": {
+       "keywords": {
+         "female": ["filha", "mãe", "mulher", "esposa", ...],
+         "male": ["filho", "pai", "marido", "esposo", ...]
+       }
+     }
+   }
+   ```
+
+2. **Build time:** Script scans genealogical relations and person roles
+3. **Output:** Gender + source tracked in `person.gender` and `person.gender_source`
+4. **UI display:** Shows "(inferred)" label when `gender_source === "inferred"`
+
+### Customization
+
+To modify gender inference for your project:
+
+- Edit `projects/{project}/gender_rules.json`
+- Add/remove keywords for your language
+- Rebuild with `python3 build_docs_logical.py {project_path}`
+
+See **[SCHEMA.md](SCHEMA.md)** for full data model and gender inference details.
+

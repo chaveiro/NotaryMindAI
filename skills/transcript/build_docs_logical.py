@@ -20,6 +20,93 @@ import json, os, sys, datetime, re, unicodedata
 SCHEMA_VERSION = "2.0"
 SKILL_DIR = os.path.dirname(os.path.abspath(__file__))
 
+def infer_gender(person, relations_text, gender_rules):
+    """Infer gender from relations text using keywords from gender_rules.
+    Returns (gender, source) where source is 'explicit' or 'inferred'.
+    Prioritizes person's OWN roles (outgoing relations) over others' roles (incoming).
+    """
+    if person.get('gender'):
+        return (person['gender'], 'explicit')
+    
+    if not gender_rules or 'keywords' not in gender_rules:
+        return (None, None)
+    
+    text_norm = relations_text.lower()
+    f_keywords = gender_rules.get('keywords', {}).get('female', [])
+    m_keywords = gender_rules.get('keywords', {}).get('male', [])
+    
+    # Match female keywords
+    if f_keywords:
+        pattern = r'\b(' + '|'.join(re.escape(k) for k in f_keywords) + r')\b'
+        if re.search(pattern, text_norm):
+            return ('F', 'context')
+    
+    # Match male keywords
+    if m_keywords:
+        pattern = r'\b(' + '|'.join(re.escape(k) for k in m_keywords) + r')\b'
+        if re.search(pattern, text_norm):
+            return ('M', 'context')
+    
+    return (None, None)
+
+def enrich_persons_with_gender(persons, relations, project_path):
+    """Add gender_source field to track whether gender is explicit or inferred.
+    Prioritizes person's own role (where they are 'from') over their relatives' roles.
+    """
+    # Load gender rules from project
+    gender_rules = None
+    rules_path = os.path.join(project_path, 'gender_rules.json')
+    if os.path.exists(rules_path):
+        try:
+            with open(rules_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                gender_rules = config.get('gender_inference', {})
+        except:
+            pass
+    
+    # Build relation map: person_name → [relations]
+    # Distinguish between 'from' (subject/own role) and 'to' (object/relative's role)
+    rels_by_person_from = {}  # Person's own roles
+    rels_by_person_to = {}    # Person as object (others' roles)
+    
+    for r in relations:
+        from_name = r.get('from', '')
+        to_name = r.get('to', '')
+        rel_text = r.get('relation', '')
+        
+        if from_name:
+            if from_name not in rels_by_person_from:
+                rels_by_person_from[from_name] = []
+            rels_by_person_from[from_name].append(rel_text)
+        
+        if to_name:
+            if to_name not in rels_by_person_to:
+                rels_by_person_to[to_name] = []
+            rels_by_person_to[to_name].append(rel_text)
+    
+    # Enrich persons with gender_source
+    for p in persons:
+        if p.get('gender'):
+            p['gender_source'] = 'explicit'
+        else:
+            # Try to infer gender: prioritize own roles over others' roles
+            name = p.get('name', '')
+            
+            # First try: person's own roles (where they are the subject)
+            rels_text_from = ' '.join(rels_by_person_from.get(name, []))
+            gender, source = infer_gender(p, rels_text_from, gender_rules)
+            
+            # If no match, fall back to: person as object (others' roles)
+            if not gender:
+                rels_text_to = ' '.join(rels_by_person_to.get(name, []))
+                gender, source = infer_gender(p, rels_text_to, gender_rules)
+            
+            if gender:
+                p['gender'] = gender
+                p['gender_source'] = source
+    
+    return persons
+
 def setup_paths(project_path):
     """Setup paths based on project location."""
     if not os.path.isdir(project_path):
@@ -431,6 +518,9 @@ def build():
     # Aggregate all persons and relations (top-level)
     persons_top = merge_persons(gen_all_p)
     relations_top = supersede(merge_relations(gen_all_r))
+
+    # Add gender_source tracking to persons
+    persons_top = enrich_persons_with_gender(persons_top, relations_top, PROJECT_PATH)
 
     out = {
         "schema_version": SCHEMA_VERSION,

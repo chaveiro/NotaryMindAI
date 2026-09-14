@@ -141,6 +141,7 @@ async function loadConfigFromCandidates() {
       const response = await fetch(url);
       if (response.ok) {
         const config = await response.json();
+        SCHEMA = config;
         console.log(`✅ Config loaded from: ${url}`);
         return config;
       }
@@ -208,12 +209,16 @@ async function loadConfig() {
 
 const norm=s=>(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
 const clean=s=>(s||"").replace(/\([^)]*\)/g," ").replace(/\[[^\]]*\]/g," ").replace(/\s+/g," ").trim();
-const esc=s=>(s||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
-const SEXO_F=/\b(filha|mae|mulher|esposa|irma|madrinha|viuva|sogra|nora|afilhada|divorciada|inventariada|solteira)\b/;
-const SEXO_M=/\b(filho|pai|marido|esposo|irmao|padrinho|viuvo|sogro|genro|afilhado|divorciado|inventariado|solteiro)\b/;
-function inferSexo(p, rels){ if(p.sexo){ const s=(p.sexo||"").toUpperCase(); return s[0]==="F"?"F":s[0]==="M"?"M":""; }
-  const txt=norm((p.role||"")+" "+(rels||[]).map(r=>r.relation).join(" "));
-  if(SEXO_F.test(txt)) return "F"; if(SEXO_M.test(txt)) return "M"; return ""; }
+const esc=s=>{
+  if(!s) return "";
+  if(Array.isArray(s)) {
+    const filtered = s.filter(x=>x);
+    return filtered.length ? filtered.join("; ") : "";
+  }
+  const str = (""+s).replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
+  return str.trim() ? str : "";
+};
+// Gender inference moved to build script (gender inferred from relations at build time, stored in person._sexo)
 // Initialized by loadConfig()
 
 // relação inversa: quando a pessoa vista é o ALVO (para), descrever da perspetiva dela.
@@ -222,7 +227,7 @@ function inferSexo(p, rels){ if(p.sexo){ const s=(p.sexo||"").toUpperCase(); ret
 // No transformations needed - trust what GenAI set during OCR
 
 
-let DATA=null, MODEL=null, nameToId={}, view="gen", focusId=null;
+let DATA=null, MODEL=null, SCHEMA=null, nameToId={}, view="gen", focusId=null;
 const hidden=new Set();            // categorias escondidas
 let isoSet=new Set();              // nós isolados ou com transacionais hidden
 let posGen={}, posProp={}, posDoc={};   // posições por vista
@@ -774,7 +779,7 @@ function buildModel(data){
     return {...r, deId, paraId, cat: attribute};
   });
   const relByDe={}; relacoes.forEach(r=>{ (relByDe[r.deId]=relByDe[r.deId]||[]).push(r); });
-  people.forEach(p=>{ p._sexo=inferSexo(p, relByDe[p.id]||[]); });
+  // Gender inference moved to build script
   return {people,relations:relacoes,properties,docs,docById,imgToDoc,sameArticle,pById,nameToId,totalDocs,totalImgs};
 }
 
@@ -814,7 +819,7 @@ svg.addEventListener("click",e=>{ if(dragCtx||panning)return; const p=e.target.c
 const tip=document.createElement("div"); tip.id="tip"; document.body.appendChild(tip);
 function edgeName(id){ return !id?"":id.startsWith("PR:")?(MODEL.properties.find(x=>x.id===id)?.description||id):id.startsWith("DL:")?id.slice(3):(MODEL.pById[id]?.name||id.slice(2)); }
 function tipText(p){ const cat=p.dataset.cat,rel=p.dataset.rel,source=p.dataset.source,status=p.dataset.status,conf=p.dataset.conf;
-  let tip = `${edgeName(p.dataset.a)} - ${rel||CAT_LABEL[cat]||cat} → ${edgeName(p.dataset.b)}`;
+  let tip = `${edgeName(p.dataset.b)} → ${rel||CAT_LABEL[cat]||cat} → ${edgeName(p.dataset.a)}`;
   if(status) tip += ` (${status})`;
   if(conf) tip += ` 🎯 ${conf} confidence`;
   if(source) tip += `  [${source}]`;
@@ -1307,28 +1312,34 @@ function closePanel(){ panel.classList.remove("show"); focusId=null; applyFocus(
 function personByNodeId(id){ if(id.startsWith("P:")) return MODEL.pById[id];
   // pessoa da vista de properties (X:) → tenta casar com pessoa da genealogia
   const nm=id.slice(2); return MODEL.people.find(p=>[p.name,...(p.variants||[]).map(v=>typeof v === 'string' ? v : v.name || v)].map(clean).map(norm).some(k=>k===nm))||{nome:nm,_props:[],_docs:[]}; }
+// Get emoji icon (label shown on hover via title attribute)
+function getIcon(key){
+  const label = SCHEMA?.labels?.person_details?.[key] || key;
+  const emoji = label?.split(' ')?.[0] || '📌';
+  const text = label?.split(' ')?.slice(1).join(' ') || key;
+  return `<span title="${text}" style="cursor:help">${emoji}</span>`;
+}
 function showPerson(id){
   const p=personByNodeId(id); const dById=MODEL.docById;
   let h=`<h2>${esc(p.name)}</h2>`;
   if(p.role) h+=`<div class="role">${esc(p.role)}</div>`;
   const vidas=[p.birth?`n. ${p.birth}`:"",p.baptism?`bapt. ${p.baptism}`:"",p.death?`† ${p.death}`:""].filter(Boolean).join(" · ");
-  if(vidas) h+=`<div><span class="k">Datas:</span> ${esc(vidas)}</div>`;
-  if(p.variants?.length) h+=`<div><span class="k">Variantes:</span> ${esc(p.variants.map(v=>typeof v === 'string' ? v : v.name || v).join("; "))}</div>`;
-  if(p.sexo||p._sexo) h+=`<div><span class="k">Sexo:</span> ${esc(p.sexo? (p.sexo[0].toUpperCase()==="F"?"Feminino":"Masculino") : (p._sexo==="F"?"Feminino (inferred)":"Masculino (inferred)"))}</div>`;
-  if(p.alias) h+=`<div><span class="k">Alias:</span> ${esc(p.alias)}</div>`;
-  if(p.natural) h+=`<div><span class="k">Natural:</span> ${esc(p.natural)}</div>`;
-  if(p.residencia) h+=`<div><span class="k">Residência:</span> ${esc(p.residencia)}</div>`;
-  if(p.profession) h+=`<div><span class="k">Profession:</span> ${esc(p.profession)}</div>`;
-  if(p.burial) h+=`<div><span class="k">Burial:</span> ${esc(p.burial)}</div>`;
-  if(p.notes) h+=`<div><span class="k">Notas:</span> ${esc(p.notes)}</div>`;
-  if(p.notes) h+=`<div><span class="k">Observações:</span> ${esc(p.notes)}</div>`;
+  if(vidas) h+=`<div><span class="k">${getIcon("dates")}</span> ${esc(vidas)}</div>`;
+  if(p.variants?.length) h+=`<div><span class="k">${getIcon("variants")}</span> ${esc(p.variants.map(v=>typeof v === 'string' ? v : v.name || v).join("; "))}</div>`;
+  if(p.gender) h+=`<div><span class="k">${getIcon("gender")}</span> ${esc(p.gender==="F"?"Feminino":"Masculino")}${p.gender_source && p.gender_source !== 'explicit' ? ` (${p.gender_source})` : ''}</div>`;
+  if(p.alias) h+=`<div><span class="k">${getIcon("alias")}</span> ${esc(p.alias)}</div>`;
+  if(p.natural) h+=`<div><span class="k">${getIcon("birthplace")}</span> ${esc(p.natural)}</div>`;
+  if(p.residencia) h+=`<div><span class="k">${getIcon("residence")}</span> ${esc(p.residencia)}</div>`;
+  if(p.profession) h+=`<div><span class="k">${getIcon("profession")}</span> ${esc(p.profession)}</div>`;
+  if(p.burial) h+=`<div><span class="k">${getIcon("burial")}</span> ${esc(p.burial)}</div>`;
+  if(p.notes) h+=`<div><span class="k">${getIcon("notes")}</span> ${esc(p.notes)}</div>`;
   const rel=MODEL.relations.filter(r=>r.deId===p.id||r.paraId===p.id);
   if(rel.length){ h+=`<h3>Relações</h3><ul>`+rel.map(r=>{
     let other, dir;
     if(r.deId===p.id){ other=r.to; dir=r.relation; }
     else { other=r.from; dir=r.relation; }
     const meta=[r.status||"",r.location?`em ${r.location}`:"",r.date?`data ${r.date}`:"",r.value?`valor ${r.value}`:"",r.property||"",r.notes||""].filter(Boolean).join("; ");
-    return `<li>${esc(dir)} <b>${esc(other)}</b> <span class="k">[${esc(r.source)}]${meta?" - "+esc(meta):""}</span></li>`; }).join("")+`</ul>`; }
+    return `<li>${esc(dir)} <b>${esc(other)}</b> <span class="k">${r.source?`[${esc(r.source)}]`:""}${meta?" - "+esc(meta):""}</span></li>`; }).join("")+`</ul>`; }
   if(p._props?.length){ h+=`<h3>Propriedades (purchase/sale) (${p._props.length})</h3><ul>`+p._props.map(pr=>
     `<li><b>${esc(pr.role)}</b> - ${esc((pr.description||pr.title||"").slice(0,80))} <span class="k">${esc(pr.location||"")}${pr.article?" · art. "+pr.article:""}</span><br/><span class="k">🛍️ ${esc(pr.seller||"?")}</span><br/><span class="k">🛒 ${esc(pr.buyer||"?")}</span><br/><span class="k">Data: ${esc(pr.date||"")} · Value: ${esc(pr.value_tx||pr.value||"")} · Doc: ${esc(pr.document||"")}</span></li>`).join("")+`</ul>`; }
   if(p._docs?.length){ h+=`<h3>Documentos onde aparece (${p._docs.length})</h3>`+p._docs.map(did=>docDetails(dById[did])).join(""); }
@@ -1497,7 +1508,7 @@ function showDoc(id){
   }
   if((d.properties||[]).length){ h+=`<h3>Propriedades (${d.properties.length})</h3><ul>`+d.properties.map(pr=>`<li>${esc((pr.description||"").slice(0,50))} <span class="k">${esc(pr.location||"")}</span></li>`).join("")+`</ul>`; }
   const ppl=involvedPeople(d);
-  if(ppl.size){ h+=`<h3>Pessoas envolvidas</h3><ul>`+[...ppl.entries()].map(([pid,v])=>`<li><span class="docMenuLink" data-person="${pid}" title="clique para ir">${esc(v.name)}</span> <span class="k">[${esc(v.role)}]</span></li>`).join("")+`</ul>`; }
+  if(ppl.size){ h+=`<h3>Pessoas envolvidas</h3><ul>`+[...ppl.entries()].map(([pid,v])=>`<li><span class="docMenuLink" data-person="${pid}" title="clique para ir">${esc(v.name)}</span> <span class="k">${v.role?`[${esc(v.role)}]`:`[?]`}</span></li>`).join("")+`</ul>`; }
   h+=row("Notário/Tabelião",d.notario)+row("Tribunal/Cartório",d.tribunal)+row("Processo no",d.numero_processo)+row("Value total",d.valor_total);
   const ents=(d.entities?.names||[]); if(ents.length){ h+=`<h3>Entidades (${ents.length})</h3><div class="k">${esc(ents.slice(0,40).join(" · "))}</div>`; }
   h+=`<h3>Documentos onde aparece</h3>`+docDetails(d);
@@ -1563,7 +1574,7 @@ function showRelation(p){
   let h=`<h2>Relation</h2><div class="role">${esc(CAT_LABEL[cat]||cat)}${source?` · [${esc(source)}]`:""}`;
   if(conf) h += ` <span style="font-weight:600;color:#7c3aed">🎯 ${esc(conf)}</span>`;
   h += `</div>`;
-  h+=`<div><b>${esc(nm(a))}</b> - ${esc(rel||CAT_LABEL[cat]||cat)} → <b>${esc(nm(b))}</b></div>`;
+  h+=`<div><b>${esc(nm(b))}</b> ${esc(rel||CAT_LABEL[cat]||cat)} <b>${esc(nm(a))}</b></div>`;
   const full=MODEL.relations.find(r=>r.cat===cat&&((r.deId===a&&r.paraId===b)||(r.deId===b&&r.paraId===a)));
   if(full){
     const meta=[full.status?`Estado: ${full.status}`:"",full.location?`Local: ${full.location}`:"",full.date?`Data: ${full.date}`:"",full.value?`Valor: ${full.value}`:"",full.property?`Propriedade: ${full.property}`:"",full.notes?`Notas: ${full.notes}`:""].filter(Boolean);

@@ -439,5 +439,19 @@
       "import_file_label": "📂 Importar ficheiro JSON:",
       "import_file_button": "Importar ficheiro"
     }
+  },
+  "labels": {
+    "person_details": {
+      "dates": "📅 Datas",
+      "variants": "🔄 Variantes",
+      "gender": "⚧ Sexo",
+      "alias": "📝 Alias",
+      "birthplace": "🏠 Natural",
+      "residence": "🏘️ Residência",
+      "profession": "💼 Profissão",
+      "role": "👤 Papel",
+      "burial": "⚰️ Enterro",
+      "notes": "📋 Notas"
+    }
   }
 }
