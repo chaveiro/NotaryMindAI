@@ -1,0 +1,443 @@
+{
+  "schema_version": "2.0",
+  "ui_version": "2.0",
+  "name": "NotaryMind AI — Explorador de Certidões, Relações e Propriedades",
+  "description": "Web UI for genealogical & notarial document archives",
+  "last_updated": "2026-09-14T01:31:00Z",
+  "relations": {
+    "filiation": {
+      "label": "Children",
+      "label_pt": "Filhos",
+      "color": "#2563eb",
+      "group": "genealogy",
+      "attributes": []
+    },
+    "marriage": {
+      "label": "Married",
+      "label_pt": "Casado",
+      "color": "#db2777",
+      "group": "genealogy",
+      "attributes": []
+    },
+    "kinship": {
+      "label": "Siblings",
+      "label_pt": "Irmãos",
+      "color": "#059669",
+      "group": "genealogy",
+      "attributes": []
+    },
+    "affinity": {
+      "label": "Affinity",
+      "label_pt": "Afinidade",
+      "color": "#d97706",
+      "group": "genealogy",
+      "attributes": []
+    },
+    "godparent": {
+      "label": "Godparents",
+      "label_pt": "Padrinhos",
+      "color": "#0891b2",
+      "group": "genealogy",
+      "attributes": []
+    },
+    "descent": {
+      "label": "Inferred Descent",
+      "label_pt": "Descendência Inferida",
+      "color": "#7c3aed",
+      "group": "genealogy",
+      "attributes": []
+    },
+    "inheritance": {
+      "label": "Inheritance",
+      "label_pt": "Herança",
+      "color": "#7c3aed",
+      "group": "succession",
+      "attributes": [
+        "heir",
+        "from",
+        "value",
+        "label"
+      ]
+    },
+    "sale": {
+      "label": "Sale",
+      "label_pt": "Venda",
+      "color": "#dc2626",
+      "group": "economic",
+      "attributes": [
+        "seller",
+        "buyer",
+        "value",
+        "date",
+        "label",
+        "property"
+      ]
+    },
+    "purchase": {
+      "label": "Purchase",
+      "label_pt": "Compra",
+      "color": "#dc2626",
+      "group": "economic",
+      "attributes": [
+        "buyer",
+        "seller",
+        "value",
+        "date",
+        "label",
+        "property"
+      ]
+    },
+    "mortgage": {
+      "label": "Mortgage",
+      "label_pt": "Hipoteca",
+      "color": "#0f766e",
+      "group": "economic",
+      "attributes": [
+        "mortgagor",
+        "mortgagee",
+        "value",
+        "date",
+        "label",
+        "property"
+      ]
+    },
+    "debt": {
+      "label": "Debt",
+      "label_pt": "Dívida",
+      "color": "#0f766e",
+      "group": "economic",
+      "attributes": [
+        "debtor",
+        "creditor",
+        "value",
+        "date",
+        "label"
+      ]
+    },
+    "heir": {
+      "label": "Heir",
+      "label_pt": "Herdeiro",
+      "color": "#7c3aed",
+      "group": "succession",
+      "attributes": [
+        "value",
+        "label"
+      ]
+    },
+    "legatee": {
+      "label": "Legatee",
+      "label_pt": "Legatário",
+      "color": "#7c3aed",
+      "group": "succession",
+      "attributes": [
+        "value",
+        "label"
+      ]
+    },
+    "executor": {
+      "label": "Executor",
+      "label_pt": "Testamenteiro",
+      "color": "#7c3aed",
+      "group": "succession",
+      "attributes": [
+        "label"
+      ]
+    },
+    "testator": {
+      "label": "Testator",
+      "label_pt": "Testador",
+      "color": "#7c3aed",
+      "group": "succession",
+      "attributes": [
+        "label"
+      ]
+    },
+    "guardian": {
+      "label": "Guardian",
+      "label_pt": "Tutor",
+      "color": "#f59e0b",
+      "group": "legal",
+      "attributes": [
+        "label"
+      ]
+    },
+    "ward": {
+      "label": "Ward",
+      "label_pt": "Tutelado",
+      "color": "#f59e0b",
+      "group": "legal",
+      "attributes": [
+        "label"
+      ]
+    },
+    "procurator": {
+      "label": "Procurator",
+      "label_pt": "Procurador",
+      "color": "#f59e0b",
+      "group": "legal",
+      "attributes": [
+        "label"
+      ]
+    },
+    "principal": {
+      "label": "Principal",
+      "label_pt": "Constituinte",
+      "color": "#f59e0b",
+      "group": "legal",
+      "attributes": [
+        "label"
+      ]
+    },
+    "witness": {
+      "label": "Witness",
+      "label_pt": "Testemunha",
+      "color": "#6366f1",
+      "group": "legal",
+      "attributes": [
+        "label"
+      ]
+    },
+    "legitimated": {
+      "label": "Legitimated",
+      "label_pt": "Legitimado",
+      "color": "#84cc16",
+      "group": "legitimation",
+      "attributes": [
+        "date",
+        "label"
+      ]
+    },
+    "acknowledged": {
+      "label": "Acknowledged",
+      "label_pt": "Reconhecido",
+      "color": "#84cc16",
+      "group": "legitimation",
+      "attributes": [
+        "date",
+        "label"
+      ]
+    },
+    "other": {
+      "label": "Other",
+      "label_pt": "Outro",
+      "color": "#6b7280",
+      "group": "other",
+      "attributes": []
+    }
+  },
+  "groups": {
+    "genealogy": {
+      "label": "Genealogy",
+      "label_pt": "Genealogia",
+      "order": 1
+    },
+    "economic": {
+      "label": "Economic",
+      "label_pt": "Económica",
+      "order": 2
+    },
+    "succession": {
+      "label": "Succession",
+      "label_pt": "Sucessão",
+      "order": 3
+    },
+    "legal": {
+      "label": "Legal",
+      "label_pt": "Legal",
+      "order": 4
+    },
+    "legitimation": {
+      "label": "Legitimation",
+      "label_pt": "Legitimação",
+      "order": 5
+    },
+    "other": {
+      "label": "Other",
+      "label_pt": "Outro",
+      "order": 6
+    }
+  },
+  "inference": {
+    "confidence_styles": {
+      "high": {
+        "dash": "4",
+        "stroke": "2.2",
+        "opacity": "1",
+        "label": "High confidence"
+      },
+      "medium": {
+        "dash": "3 5",
+        "stroke": "2",
+        "opacity": "0.8",
+        "label": "Medium confidence"
+      },
+      "low": {
+        "dash": "2 4",
+        "stroke": "1.8",
+        "opacity": "0.6",
+        "label": "Low confidence"
+      }
+    },
+    "special_dashes": {
+      "glossary": {
+        "dash": "2 4",
+        "label": "From glossary"
+      },
+      "divorce": {
+        "dash": "9 4",
+        "label": "Divorced/widowed"
+      },
+      "descent": {
+        "dash": "6 5",
+        "label": "Inferred descent"
+      },
+      "explicit": {
+        "dash": "0",
+        "label": "Explicit"
+      }
+    }
+  },
+  "colors": {
+    "background": "#f1f5f9",
+    "panel": "#ffffff",
+    "text": "#0f172a",
+    "text_muted": "#475569",
+    "line": "#cbd5e1",
+    "header_bg": "#0f172a",
+    "header_text": "#ffffff",
+    "bar_bg": "#e2e8f0",
+    "node_fill_female": "#fdf2f8",
+    "node_fill_male": "#eff6ff",
+    "node_fill_unknown": "#fff"
+  },
+  "layout": {
+    "node_width": 210,
+    "node_height": 64,
+    "genealogy": {
+      "gap_x": 100,
+      "gap_y": 60,
+      "padding": 46,
+      "couple_gap": 8,
+      "sibling_gap": 35
+    },
+    "properties": {
+      "gap_y": 20,
+      "col_width": 250,
+      "pad_x": 40,
+      "pad_y": 50
+    },
+    "viewport_padding": 40
+  },
+  "hints": {
+    "genealogy": "Arraste os nós (snap por geração) · roda=zoom · botão do meio/fundo=pan · clique=detalhes · tracejado curto=glossário",
+    "properties": "Vermelho = purchase/sale · clique numa aresta=relação/documento · roda=zoom · botão do meio/fundo=pan",
+    "documents": "Documentos ↔ properties/pessoas (verde=buyer, vermelho=seller, azul=aparece) · clique numa aresta/nó"
+  },
+  "filters": {
+    "genealogy_default_hidden": [
+      "sale",
+      "inheritance",
+      "mortgage"
+    ],
+    "doc_view": {
+      "sale": {
+        "label": "Vendas",
+        "label_pt": "Vendas",
+        "color": "#dc2626"
+      },
+      "aparece": {
+        "label": "Pessoas",
+        "label_pt": "Pessoas",
+        "color": "#3b82f6"
+      },
+      "propriedade": {
+        "label": "Propriedade",
+        "label_pt": "Propriedade",
+        "color": "#94a3b8"
+      }
+    },
+    "doc_role_colors": {
+      "purchase": "#16a34a",
+      "sale": "#dc2626",
+      "aparece": "#3b82f6"
+    }
+  },
+  "ui_strings": {
+    "buttons": {
+      "zoom_in": "+ Zoom",
+      "zoom_out": "- Zoom",
+      "reset": "↺ Reset",
+      "download": "Download ⭳",
+      "close": "Fechar ✕",
+      "previous": "◀ Anterior",
+      "next": "Próxima ▶",
+      "copy": "Copiar",
+      "copy_all": "Copiar Tudo",
+      "expand": "Expandir"
+    },
+    "status": {
+      "loading": "Carregando...",
+      "copied": "✓ Copiado!",
+      "error_loading": "Error loading JSON.",
+      "error_processing": "Error processing data",
+      "no_transcription": "Sem transcrição"
+    },
+    "labels": {
+      "transcription": "📝 Transcrição",
+      "ocr_summary": "📄 Resumo OCR",
+      "file_listing": "📄 Listagem de Ficheiros",
+      "documents": "Documentos onde aparece",
+      "navigation": "Navigation"
+    },
+    "titles": {
+      "archive_info": "clica para info",
+      "settings": "Configurações",
+      "fit_zoom": "Ajustar Zoom"
+    },
+    "hints": {
+      "drag_nodes": "Drag nodes · click for details/drilldown",
+      "navigation": "Navigation"
+    },
+    "placeholders": {
+      "json_url": "ex: http://localhost:8000/documentos_logicos.json",
+      "search": "Search..."
+    },
+    "modal_actions": {
+      "load_url": "Carregar de URL",
+      "import_file": "Importar ficheiro",
+      "close": "Fechar",
+      "close_source": "Fechar"
+    },
+    "modal_labels": {
+      "current_source": "Fonte Atual",
+      "load_from_url": "📥 Carregar de URL:",
+      "import_json": "📂 Importar ficheiro JSON:"
+    },
+    "view_buttons": {
+      "genealogy": "Genealogy",
+      "properties": "Properties",
+      "documents": "Documents",
+      "clear_focus": "Limpar foco"
+    },
+    "image_actions": {
+      "view_image": "Ver imagem",
+      "view_json": "Ver JSON",
+      "toggle_transcription": "Toggle Transcription"
+    },
+    "nav_buttons": {
+      "genealogy": "Genealogy",
+      "properties": "Properties",
+      "documents": "Documents"
+    },
+    "modal_titles": {
+      "archive_info": "clica para info",
+      "settings": "Configurações"
+    },
+    "load_modal": {
+      "load_url_label": "📥 Carregar de URL:",
+      "load_url_button": "Carregar de URL",
+      "import_file_label": "📂 Importar ficheiro JSON:",
+      "import_file_button": "Importar ficheiro"
+    }
+  }
+}

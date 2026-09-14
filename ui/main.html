@@ -1,0 +1,1740 @@
+<!doctype html>
+<html lang="pt"><head><meta charset="utf-8"/>
+<style>
+  #archiveName{cursor:help;font-weight:500;border-bottom:1px dotted #64748b;position:relative}
+  :root{--bg:#f1f5f9;--pan:#ffffff;--ink:#0f172a;--mut:#475569;--line:#cbd5e1}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;height:100vh}
+  header{padding:10px 16px;background:#0f172a;color:#fff;flex:0 0 auto;position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+  header h1{margin:0;font-size:16px} header p{margin:2px 0 0;font-size:11px;color:#cbd5e1}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:7px 16px;background:#e2e8f0;font-size:12px;flex:0 0 auto;border-bottom:1px solid var(--line)}
+  .bar .grp{display:flex;gap:6px;align-items:center}
+  .bar button{font-size:12px;padding:4px 10px;border:1px solid #94a3b8;border-radius:6px;background:#fff;cursor:pointer}
+  .bar button:hover{background:#f8fafc}
+  .bar button.on{background:#0f172a;color:#fff;border-color:#0f172a}
+  .bar label{display:flex;gap:4px;align-items:center;cursor:pointer;white-space:nowrap}
+  .sw{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid #0002}
+  .sep{width:1px;height:20px;background:#94a3b8;margin:0 2px}
+  .main{flex:1 1 auto;display:flex;min-height:0}
+  .wrap{flex:1 1 auto;overflow:hidden;position:relative}
+  svg{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+  svg.panning{cursor:grabbing}
+  aside{width:340px;flex:0 0 auto;background:var(--pan);border-left:1px solid var(--line);overflow:auto;padding:14px;font-size:13px;display:none}
+  aside.show{display:block}
+  aside h2{margin:0 0 2px;font-size:15px}
+  aside .role{color:var(--mut);font-size:12px;margin-bottom:8px}
+  aside h3{margin:14px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#334155;border-bottom:1px solid var(--line);padding-bottom:2px}
+  aside ul{margin:4px 0;padding-left:16px} aside li{margin:2px 0}
+  aside .k{color:var(--mut)}
+  aside .close{float:right;cursor:pointer;border:none;background:#e2e8f0;border-radius:6px;padding:2px 8px}
+  aside .btn{margin-top:8px;font-size:12px;padding:4px 10px;border:1px solid #94a3b8;border-radius:6px;background:#fff;cursor:pointer}
+  .node{cursor:grab}.node.drag{cursor:grabbing}
+  .node rect,.node ellipse{stroke:#334155;stroke-width:1.4}
+  .node:hover rect,.node:hover ellipse{stroke:#0ea5e9;stroke-width:2.2}
+  .node.sel rect,.node.sel ellipse{stroke:#0ea5e9;stroke-width:2.6}
+  .dim{opacity:.12}
+  .nm{font-size:12.5px;font-weight:700;fill:#0f172a}
+  .pp{font-size:9.5px;fill:#475569}.su{font-size:9px;fill:#64748b}
+  .grid{stroke:#e5eaf1;stroke-width:1;stroke-dasharray:3 7}
+  .hint{color:#475569}
+  .empty{padding:30px;font-size:14px;color:#334155;max-width:640px;line-height:1.5}
+  code{background:#e2e8f0;padding:1px 5px;border-radius:4px}
+  path[data-a]{cursor:pointer}
+  path.hit{cursor:pointer}
+  aside a{color:#2563eb;text-decoration:none} aside a:hover{text-decoration:underline}
+  aside details.docsrc{margin:3px 0;border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+  aside details.docsrc summary{cursor:pointer;font-size:12.5px}
+  aside .srcbox{padding:4px 0 2px 10px}
+  #tip{position:fixed;display:none;pointer-events:none;z-index:60;background:#0f172a;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;max-width:300px;box-shadow:0 2px 8px #0005;line-height:1.35}
+  #archiveName{cursor:help;font-weight:500;border-bottom:1px dotted #64748b;position:relative}
+</style></head>
+<body>
+<header>
+  <div style="flex:1">
+    <h1 style="margin:0 0 2px 0">NotaryMind AI</h1>
+    <p style="margin:0;font-size:13px;color:#94a3b8;font-weight:400">Explorador de Certidões, Relações e Propriedades</p>
+  </div>
+  <div style="text-align:right;white-space:nowrap;display:flex;flex-direction:column;gap:2px">
+    <p id="stats" style="margin:0"></p>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
+      <p id="sub" style="margin:0"><span id="archiveName" style="cursor:help;font-weight:500;border-bottom:1px dotted #64748b;cursor:pointer" title="clica para info"></span></p>
+      <button id="headerSettings" title="Configurações" style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px;color:#94a3b8;transition:color 0.2s" onmouseover="this.style.color='#cbd5e1'" onmouseout="this.style.color='#94a3b8'">⚙️</button>
+    </div>
+  </div>
+</header>
+
+<div class="bar" id="bar" style="display:none">
+  <div class="grp">
+    <button id="vGen" class="on"></button>
+    <button id="vProp"></button>
+    <button id="vDoc"></button>
+  </div>
+  <div class="sep"></div>
+  <div class="grp" id="filters"></div>
+  <div class="sep"></div>
+  <div class="grp">
+    <button id="fit" title="Ajustar Zoom">⛶</button>
+    <button id="clearFocus" style="display:none">Limpar foco</button>
+  </div>
+  <span class="hint" id="barHint">Drag nodes · click for details/drilldown</span>
+</div>
+
+
+<div id="sourceModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:3000;align-items:center;justify-content:center;flex-direction:column">
+  <div style="background:#1e293b;color:#e2e8f0;padding:20px;border-radius:8px;min-width:400px;max-width:500px;box-shadow:0 4px 20px #0005">
+    <h2 style="margin-top:0">Fonte de Dados</h2>
+
+    <div style="margin:15px 0;font-size:12px;color:#94a3b8">
+      <b>Fonte atual:</b><br>
+      <code id="currentSource" style="display:block;margin-top:5px;padding:8px;background:#0f172a;border-radius:4px;word-break:break-all">documentos_logicos.json</code>
+    </div>
+
+    <div style="margin:15px 0">
+      <label style="display:block;font-size:12px;margin-bottom:5px"><b>📥 Carregar de URL:</b></label>
+      <input id="urlInput" type="text" placeholder="ex: http://localhost:8000/documentos_logicos.json" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;box-sizing:border-box;font-size:12px">
+      <button id="btnLoadUrl" style="margin-top:8px;padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;width:100%"></button>
+    </div>
+
+    <div style="margin:15px 0">
+      <label style="display:block;font-size:12px;margin-bottom:5px"><b>📂 Importar ficheiro JSON:</b></label>
+      <input id="fileInput" type="file" accept=".json" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;box-sizing:border-box;font-size:12px;cursor:pointer">
+      <button id="btnLoadFile" style="margin-top:8px;padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;width:100%"></button>
+    </div>
+
+    <button id="btnCloseSource" style="margin-top:15px;padding:8px 12px;background:#475569;color:#fff;border:none;border-radius:4px;cursor:pointer;width:100%">Fechar</button>
+  </div>
+</div>
+
+<div id="archiveTooltip" style="display:none;position:fixed;top:50px;right:20px;background:#1e293b;color:#e2e8f0;border-radius:6px;border:1px solid #334155;box-shadow:0 4px 16px rgba(0,0,0,0.8);z-index:3000;overflow:hidden">
+  <div style="background:#0f172a;padding:8px 12px;border-bottom:1px solid #334155;font-size:12px;font-weight:500">📊 Estatísticas</div>
+  <div style="padding:12px 16px;white-space:pre-line;font-size:12px;line-height:1.5"><span id="archiveTooltipContent">info</span></div>
+</div>
+
+<div class="main">
+  <div class="wrap" id="wrap"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="empty" id="empty" style="display:none"></div>
+  </div>
+  <aside id="panel"></aside>
+</div>
+
+<script>
+const NS="http://www.w3.org/2000/svg";
+const svg=document.getElementById("svg"), wrap=document.getElementById("wrap"), panel=document.getElementById("panel");
+
+// ============================================================================
+// CONFIGURATION LOADER — Load schema.json at startup
+// ============================================================================
+let CONFIG = null;
+let NODE_W, NODE_H, CAT_COLOR, CAT_LABEL, SEXO_FILL;
+
+// Helper to load schema.json from multiple sources (piclaw or static server)
+async function loadConfigFromCandidates() {
+  const schemaCandidates = [
+    RAW('NotaryMindAi/ui/schema.json'),  // piclaw: /workspace/raw?path=...
+    '../ui/schema.json',                 // static server: from NotaryMindAi root
+    'schema.json'                        // relative: from current page location
+  ];
+  
+  for (const url of schemaCandidates) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const config = await response.json();
+        console.log(`✅ Config loaded from: ${url}`);
+        return config;
+      }
+    } catch(e) {
+      // Try next candidate
+    }
+  }
+  throw new Error(`Could not load schema.json from any source: ${schemaCandidates.join(', ')}`);
+}
+
+async function loadConfig() {
+  try {
+    CONFIG = await loadConfigFromCandidates();
+    
+    // Initialize layout from config
+    NODE_W = CONFIG.layout.node_width;
+    NODE_H = CONFIG.layout.node_height;
+    
+    // Build color maps from relations config
+    CAT_COLOR = {};
+    CAT_LABEL = {};
+    for (const [key, rel] of Object.entries(CONFIG.relations)) {
+      CAT_COLOR[key] = rel.color;
+      CAT_LABEL[key] = rel.label;
+    }
+    
+    // Gender-based node colors from config
+    SEXO_FILL = {
+      F: CONFIG.colors.node_fill_female,
+      M: CONFIG.colors.node_fill_male,
+      "": CONFIG.colors.node_fill_unknown
+    };
+    
+    console.log("✅ Config loaded (v" + CONFIG.ui_version + ") — " + Object.keys(CONFIG.relations).length + " relation types");
+    
+    // Initialize UI text from CONFIG
+    if(CONFIG.ui_strings) {
+      // Navigation buttons
+      if(CONFIG.ui_strings.nav_buttons) {
+        document.getElementById('vGen').textContent = CONFIG.ui_strings.nav_buttons.genealogy;
+        document.getElementById('vProp').textContent = CONFIG.ui_strings.nav_buttons.properties;
+        document.getElementById('vDoc').textContent = CONFIG.ui_strings.nav_buttons.documents;
+      }
+      // Modal titles
+      if(CONFIG.ui_strings.modal_titles) {
+        document.getElementById('archiveName').title = CONFIG.ui_strings.modal_titles.archive_info;
+        document.getElementById('headerSettings').title = CONFIG.ui_strings.modal_titles.settings;
+      }
+      // Load modal buttons and labels
+      if(CONFIG.ui_strings.load_modal) {
+        const urlLabel = document.querySelector('label:has(+ #urlInput)');
+        if(urlLabel) urlLabel.innerHTML = '<b>' + CONFIG.ui_strings.load_modal.load_url_label + '</b>';
+        document.getElementById('btnLoadUrl').textContent = CONFIG.ui_strings.load_modal.load_url_button;
+        const fileLabel = document.querySelector('label:has(+ #fileInput)');
+        if(fileLabel) fileLabel.innerHTML = '<b>' + CONFIG.ui_strings.load_modal.import_file_label + '</b>';
+        document.getElementById('btnLoadFile').textContent = CONFIG.ui_strings.load_modal.import_file_button;
+      }
+    }
+  } catch(err) {
+    console.error("❌ Failed to load schema.json:", err);
+    alert("Error loading configuration: " + err.message);
+    throw err;
+  }
+}
+
+const norm=s=>(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+const clean=s=>(s||"").replace(/\([^)]*\)/g," ").replace(/\[[^\]]*\]/g," ").replace(/\s+/g," ").trim();
+const esc=s=>(s||"").replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
+const SEXO_F=/\b(filha|mae|mulher|esposa|irma|madrinha|viuva|sogra|nora|afilhada|divorciada|inventariada|solteira)\b/;
+const SEXO_M=/\b(filho|pai|marido|esposo|irmao|padrinho|viuvo|sogro|genro|afilhado|divorciado|inventariado|solteiro)\b/;
+function inferSexo(p, rels){ if(p.sexo){ const s=(p.sexo||"").toUpperCase(); return s[0]==="F"?"F":s[0]==="M"?"M":""; }
+  const txt=norm((p.role||"")+" "+(rels||[]).map(r=>r.relation).join(" "));
+  if(SEXO_F.test(txt)) return "F"; if(SEXO_M.test(txt)) return "M"; return ""; }
+// Initialized by loadConfig()
+
+// relação inversa: quando a pessoa vista é o ALVO (para), descrever da perspetiva dela.
+// S = sexo da pessoa vista; otherS = sexo do outro. Preserva nuance de divórcio/viuvez.
+// Relation text comes directly from metadata.relation field in docs_logical.json
+// No transformations needed - trust what GenAI set during OCR
+
+
+let DATA=null, MODEL=null, nameToId={}, view="gen", focusId=null;
+const hidden=new Set();            // categorias escondidas
+let isoSet=new Set();              // nós isolados ou com transacionais hidden
+let posGen={}, posProp={}, posDoc={};   // posições por vista
+const rowYs=[];                    // linhas-guia (genealogia)
+
+// Initialize app after config loads
+const params = new URLSearchParams(window.location.search);
+const PROJECT_NAME = params.get("project") || "cotimos";  // default: cotimos
+const PROJECT_BASE = `NotaryMindAi/projects/${PROJECT_NAME}`;
+
+// links (piclaw serve o workspace por HTTP; abrir em nova tab)
+const RAW=p=>`/workspace/raw?path=${encodeURIComponent(p)}&download=1`;
+const imgUrl=img=>RAW(`${PROJECT_BASE}/imported/`+img);
+const jsonUrl=img=>RAW(`${PROJECT_BASE}/metadata/`+img.replace(/\.jpg$/i,".json"));
+function openImageViewer(imgPath, allImages=[], currentIdx=0){
+  const modal=document.createElement("div");
+  modal.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:2000;display:flex;align-items:stretch;justify-content:flex-start;flex-direction:row;padding:20px;gap:20px";
+
+  // Container esquerdo (imagem)
+  const leftContainer=document.createElement("div");
+  leftContainer.style.cssText="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;position:relative";
+
+  // Container direito (transcription) - overlay no canto superior direito da imagem
+  const rightContainer=document.createElement("div");
+  rightContainer.style.cssText="position:absolute;top:10px;right:10px;width:280px;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:12px;max-height:calc(100% - 100px);display:flex;flex-direction:column;gap:10px;overflow-y:auto;z-index:10";
+  rightContainer.id="transcriptionPanel";
+
+  // Header com detalhes do documento
+  const docDetailsHeader=document.createElement("div");
+  docDetailsHeader.style.cssText="font-size:11px;color:#cbd5e1;line-height:1.5;padding-bottom:0";
+  docDetailsHeader.id="docDetailsHeader";
+  rightContainer.appendChild(docDetailsHeader);
+
+  // Header transcription
+  const transcriptHeader=document.createElement("div");
+  transcriptHeader.style.cssText="display:none";  // Escondido pois já está em updateDocDetailsHeader
+  transcriptHeader.textContent=CONFIG.ui_strings.labels.transcription;
+  rightContainer.appendChild(transcriptHeader);
+
+  // Content transcription
+  const transcriptContent=document.createElement("div");
+  transcriptContent.style.cssText="font-size:11px;color:#cbd5e1;white-space:pre-wrap;line-height:1.4;overflow-y:auto;flex:1";
+  transcriptContent.id="transcriptContent";
+  transcriptContent.textContent=CONFIG.ui_strings.status.loading;
+  rightContainer.appendChild(transcriptContent);
+
+  leftContainer.appendChild(rightContainer);
+  modal.appendChild(leftContainer);
+
+  let scale=1, panX=0, panY=0, isDragging=false, startX=0, startY=0, startPanX=0, startPanY=0;
+  let showTranscription=true;
+  let currentImage=imgPath;
+  let currentIndex=currentIdx;
+
+  const img=document.createElement("img");
+  img.src=imgUrl(currentImage);
+  img.style.cssText="max-width:100%;max-height:calc(100% - 60px);object-fit:contain;cursor:grab;user-select:none";
+
+  const viewer=document.createElement("div");
+  viewer.style.cssText="width:100%;height:calc(100% - 60px);overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative";
+  viewer.appendChild(img);
+
+  const controls=document.createElement("div");
+  controls.style.cssText="flex-shrink:0;height:50px;display:flex;gap:12px;justify-content:center;align-items:center;padding:10px 20px;background:rgba(0,0,0,0.6);border-top:1px solid #334155;width:100%";
+
+  // Container para botões centrais
+  const centerButtons=document.createElement("div");
+  centerButtons.style.cssText="display:flex;gap:12px;justify-content:center;align-items:center;flex:1";
+
+  // Container para botões direita
+  const rightButtons=document.createElement("div");
+  rightButtons.style.cssText="display:flex;gap:8px;align-items:center";
+
+  const btnPrev=document.createElement("button");
+  btnPrev.textContent=CONFIG.ui_strings.buttons.previous;
+  btnPrev.style.cssText="padding:8px 12px;border:1px solid #ccc;border-radius:4px;background:#333;color:#fff;cursor:pointer;opacity:0.5";
+  btnPrev.disabled=true;
+  if(allImages.length>1) btnPrev.disabled=currentIdx<=0;
+  if(!btnPrev.disabled) btnPrev.style.opacity="1";
+
+  btnPrev.onclick=async ()=>{
+    if(currentIndex>0){
+      currentIndex--;
+      currentImage=allImages[currentIndex];
+      img.src=imgUrl(currentImage);
+      const transcriptTxt = await loadTranscriptionForImage(currentImage);
+      updateDocDetailsHeader(currentImage);
+      document.getElementById("transcriptContent").textContent = transcriptTxt;
+      scale=1; panX=0; panY=0; updateTransform();
+      btnPrev.disabled=currentIndex<=0;
+      btnNext.disabled=currentIndex>=allImages.length-1;
+      btnPrev.style.opacity=btnPrev.disabled?"0.5":"1";
+      btnNext.style.opacity=btnNext.disabled?"0.5":"1";
+    }
+  };
+
+  const btnNext=document.createElement("button");
+  btnNext.textContent=CONFIG.ui_strings.buttons.next;
+  btnNext.style.cssText="padding:8px 12px;border:1px solid #ccc;border-radius:4px;background:#333;color:#fff;cursor:pointer;opacity:0.5";
+  btnNext.disabled=true;
+  if(allImages.length>1) btnNext.disabled=currentIdx>=allImages.length-1;
+  if(!btnNext.disabled) btnNext.style.opacity="1";
+
+  btnNext.onclick=async ()=>{
+    if(currentIndex<allImages.length-1){
+      currentIndex++;
+      currentImage=allImages[currentIndex];
+      img.src=imgUrl(currentImage);
+      const transcriptTxt = await loadTranscriptionForImage(currentImage);
+      updateDocDetailsHeader(currentImage);
+      document.getElementById("transcriptContent").textContent = transcriptTxt;
+      scale=1; panX=0; panY=0; updateTransform();
+      btnPrev.disabled=currentIndex<=0;
+      btnNext.disabled=currentIndex>=allImages.length-1;
+      btnPrev.style.opacity=btnPrev.disabled?"0.5":"1";
+      btnNext.style.opacity=btnNext.disabled?"0.5":"1";
+    }
+  };
+
+  const btnZoomIn=document.createElement("button");
+  btnZoomIn.textContent=CONFIG.ui_strings.buttons.zoom_in;
+  btnZoomIn.style.cssText="padding:8px 12px;border:1px solid #ccc;border-radius:4px;background:#333;color:#fff;cursor:pointer";
+  btnZoomIn.onclick=()=>{ scale=Math.min(scale+0.5,50); updateTransform(); };
+
+  const btnZoomOut=document.createElement("button");
+  btnZoomOut.textContent=CONFIG.ui_strings.buttons.zoom_out;
+  btnZoomOut.style.cssText="padding:8px 12px;border:1px solid #ccc;border-radius:4px;background:#333;color:#fff;cursor:pointer";
+  btnZoomOut.onclick=()=>{ scale=Math.max(scale-0.5,0.5); updateTransform(); };
+
+  const btnReset=document.createElement("button");
+  btnReset.textContent=CONFIG.ui_strings.buttons.reset;
+  btnReset.style.cssText="padding:8px 12px;border:1px solid #ccc;border-radius:4px;background:#333;color:#fff;cursor:pointer";
+  btnReset.onclick=()=>{ scale=1; panX=0; panY=0; updateTransform(); };
+
+  const btnDownload=document.createElement("button");
+  btnDownload.textContent=CONFIG.ui_strings.buttons.download;
+  btnDownload.style.cssText="padding:8px 12px;border:1px solid #ccc;border-radius:4px;background:#333;color:#fff;cursor:pointer";
+  btnDownload.onclick=()=>{
+    const a=document.createElement("a");
+    a.href=imgUrl(currentImage);
+    a.download=currentImage;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const btnClose=document.createElement("button");
+  btnClose.textContent=CONFIG.ui_strings.buttons.close;
+  btnClose.style.cssText="padding:8px 12px;border:1px solid #ccc;border-radius:4px;background:#333;color:#fff;cursor:pointer";
+  btnClose.onclick=()=>{ modal.remove(); };
+
+  // Botão de toggle transcription
+  const btnTranscript=document.createElement("button");
+  btnTranscript.textContent="📝";
+  btnTranscript.title="Toggle Transcription";
+  btnTranscript.style.cssText="padding:8px 12px;border:1px solid #ccc;border-radius:4px;background:#555;color:#fff;cursor:pointer";
+  btnTranscript.onclick=()=>{
+    showTranscription=!showTranscription;
+    rightContainer.style.display=showTranscription?"flex":"none";
+    btnTranscript.style.background=showTranscription?"#555":"#333";
+  };
+  // Botões centrais
+  centerButtons.appendChild(btnPrev);
+  centerButtons.appendChild(btnNext);
+  centerButtons.appendChild(btnZoomIn);
+  centerButtons.appendChild(btnZoomOut);
+  centerButtons.appendChild(btnReset);
+  centerButtons.appendChild(btnDownload);
+
+  // Botões direita
+  rightButtons.appendChild(btnTranscript);
+  rightButtons.appendChild(btnClose);
+
+  // Adicionar ao controls
+  controls.appendChild(centerButtons);
+  controls.appendChild(rightButtons);
+
+  leftContainer.appendChild(viewer);
+  // rightContainer é overlay dentro de leftContainer
+  leftContainer.appendChild(controls);  // Controls como position:absolute no meio
+
+  const updateTransform=()=>{ img.style.transform=`scale(${scale}) translate(${panX}px, ${panY}px)`; };
+
+  const isImageVisible=()=>{
+    const imgRect=img.getBoundingClientRect();
+    const viewerRect=viewer.getBoundingClientRect();
+    return !(imgRect.right < viewerRect.left || imgRect.left > viewerRect.right ||
+             imgRect.bottom < viewerRect.top || imgRect.top > viewerRect.bottom);
+  };
+
+  const clampPan=()=>{
+    if(!img.naturalWidth) return;
+    const scaledW=img.naturalWidth*scale;
+    const scaledH=img.naturalHeight*scale;
+    const viewW=viewer.clientWidth;
+    const viewH=viewer.clientHeight;
+
+    if(scaledW<=viewW){
+      panX=0;
+    } else {
+      const maxPan=(scaledW-viewW)/2;
+      panX=Math.max(-maxPan, Math.min(maxPan, panX));
+    }
+
+    if(scaledH<=viewH){
+      panY=0;
+    } else {
+      const maxPan=(scaledH-viewH)/2;
+      panY=Math.max(-maxPan, Math.min(maxPan, panY));
+    }
+  };
+
+  const startDrag=(e)=>{
+    if(e.button!==0) return;
+    if(!img.naturalWidth) return;
+    isDragging=true;
+    startX=e.clientX;
+    startY=e.clientY;
+    startPanX=panX;
+    startPanY=panY;
+    img.style.cursor="grabbing";
+    e.preventDefault();
+  };
+
+  const onMouseMove=(e)=>{
+    if(isDragging){
+      const dx=e.clientX-startX;
+      const dy=e.clientY-startY;
+      panX=startPanX+dx/scale;
+      panY=startPanY+dy/scale;
+      clampPan();
+      updateTransform();
+    }
+  };
+
+  const onMouseUp=()=>{
+    isDragging=false;
+    img.style.cursor="grab";
+  };
+
+  img.onmousedown=startDrag;
+  viewer.onmousedown=(e)=>{ if(isImageVisible()) startDrag(e); };
+
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+
+  const onWheel=(e)=>{
+    e.preventDefault();
+    scale+=(e.deltaY>0?-0.1:0.1);
+    scale=Math.max(0.5,Math.min(scale,50));
+    updateTransform();
+  };
+
+  img.onwheel=onWheel;
+  viewer.onwheel=onWheel;
+  modal.onwheel=onWheel;
+
+  modal.appendChild(leftContainer);
+  modal.appendChild(rightContainer);
+  document.body.appendChild(modal);
+
+  // Carregar transcrição inicial
+  (async () => {
+    const transcriptTxt = await loadTranscriptionForImage(currentImage);
+    updateDocDetailsHeader(currentImage);
+    document.getElementById("transcriptContent").textContent = transcriptTxt;
+  })();
+}
+
+
+function openJsonViewer(imgPath){
+  const jsonPath=jsonUrl(imgPath);
+  fetch(jsonPath).then(r=>r.text()).then(txt=>{
+    const modal=document.createElement("div");
+    modal.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px";
+
+    const box=document.createElement("div");
+    box.style.cssText="background:white;border-radius:8px;padding:20px;max-width:90%;max-height:90%;overflow:auto;position:relative;box-shadow:0 4px 20px rgba(0,0,0,0.3)";
+
+    const btnClose=document.createElement("button");
+    btnClose.textContent=CONFIG.ui_strings.buttons.close;
+    btnClose.style.cssText="position:absolute;top:10px;right:10px;padding:5px 10px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;cursor:pointer";
+    btnClose.onclick=()=>{ modal.remove(); };
+
+    const title=document.createElement("h3");
+    title.textContent=imgPath;
+    title.style.cssText="margin-top:0";
+
+    const pre=document.createElement("pre");
+    pre.textContent=txt;
+    pre.style.cssText="white-space:pre-wrap;font-family:monospace;font-size:0.85em;overflow:auto;max-height:70vh";
+
+    box.appendChild(btnClose);
+    box.appendChild(title);
+    box.appendChild(pre);
+    modal.appendChild(box);
+    modal.onclick=(e)=>{ if(e.target===modal) modal.remove(); };
+    document.body.appendChild(modal);
+  }).catch(err=>alert("Error loading JSON: "+err.message));
+}
+
+
+function docSrcLinks(d){
+  const imgs=(d.sources||[]).map(f=>f.image).filter(f=>f&&/\.jpg$/i.test(f));
+  let html='';
+  (d.sources||[]).forEach((f,idx)=>{
+    if(!f.image||!/\.jpg$/i.test(f.image)) return;
+    const imgEsc=esc(f.image).replace(/'/g,"\\'");
+    const argsStr=imgs.map((img,i)=>"'"+esc(img).replace(/'/g,"\\'")+"'").join(",");
+    html+=`<div class="k">${esc(f.image)} - <a href="javascript:void(0)" onclick="openImageViewer('${imgEsc}',[${argsStr}],${idx})" title="Ver imagem">🖼️</a> <a href="javascript:openJsonViewer('${imgEsc}')" title="Ver JSON">📋</a></div>`;
+  });
+  return html || `<div class="k">-</div>`;
+}
+function row(k,v){ return v?`<div><span class="k">${k}:</span> ${esc(v)}</div>`:""; }
+// bloco de documento + links (JSON/imagem) + resumo OCR expansível
+function docDetails(d){ if(!d) return "";
+  const tipo=d.document_type?esc(d.document_type)+": ":"";
+  const obs=(d.ocr_metadata?.notes||"");
+  const transcr=docFullTranscription(d);
+  const fontes=docSrcLinks(d);
+  const imgLinks = (d.sources || []).map(f => f.image).filter(f => f && /\.jpg$/i.test(f));
+  const imageIconHtml = imgLinks.length > 0
+    ? `<span class="img-link-icon" data-first="${esc(imgLinks[0])}" data-images="${imgLinks.map(esc).join('|')}" style="cursor:pointer;font-size:1.2em;margin-left:6px;user-select:none" title="${imgLinks.length} images">🔍</span>`
+    : "";
+  const head=`<b>${esc(d.id)}</b>${imageIconHtml} - ${tipo}${esc((d.title||"").slice(0,110))} <span class="k">📅 ${esc((d.document_date||[]).join("; "))}</span>`;
+  let html=`<details class="docsrc"><summary>${head}</summary><div class="srcbox">`;
+  if(transcr) html+=`<h4 style="margin-top:0;font-weight:600;cursor:pointer;user-select:none"><span data-expand="▶">&#9656;</span> Transcrição Integral</h4><div class="k" style="padding:8px;margin-top:8px;background:#f9fafb;border-radius:2px;white-space:pre-wrap;font-family:monospace;font-size:0.85em;overflow-y:auto;display:none" data-transcr data-content="${esc(transcr)}"><div style="display:flex;gap:6px;margin-bottom:8px"><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-copy>Copiar</button><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-fullscreen>Expandir</button></div>${esc(transcr)}</div>`;
+  if(obs) html+=`<h4 style="margin-top:8px;font-weight:600;cursor:pointer;user-select:none"><span data-expand="▶">&#9656;</span> Resumo OCR</h4><div class="k" style="padding:6px;margin-top:8px;background:#f9fafb;border-radius:2px;display:none" data-obs data-content="${esc(obs)}"><div style="display:flex;gap:6px;margin-bottom:8px"><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-copy>Copiar</button><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-fullscreen>Expandir</button></div>${esc(obs)}</div>`;
+  html+=`<h4 style="margin-top:8px;font-weight:600;cursor:pointer;user-select:none"><span data-expand="▶">&#9656;</span> Listagem de Ficheiros</h4><div style="padding:6px;margin-top:8px;background:#f9fafb;border-radius:2px;display:none" data-files>${fontes}</div>`;
+  html+=`<button class="btn" style="margin-top:8px;width:100%" data-gotoDoc="DL:${d.id}">Ir para documento ↴</button>`;
+  html+=`</div></details>`;
+  return html; }
+// cria uma aresta = traço visível (sem eventos) + traço transparente largo para hover/click
+function mkEdge(gE,gHit,edges,d,color,dash,ds,wGen,arrow){
+  const vis=el("path",{d,fill:"none",stroke:color,"stroke-width":wGen?2.2:2,"stroke-dasharray":dash,"pointer-events":"none"});
+  if(arrow) vis.setAttribute("marker-end",`url(#arrow-${arrow})`);
+  const hit=el("path",{d,fill:"none",stroke:"transparent","stroke-width":16,"pointer-events":"stroke",class:"hit"});
+  for(const k in ds){ if(ds[k]!=null){ vis.dataset[k]=ds[k]; hit.dataset[k]=ds[k]; } }
+  gE.appendChild(vis); gHit.appendChild(hit); edges.push(vis,hit); return vis; }
+
+// ---------- carregar ----------
+// O JSON é servido pelo piclaw em /workspace/raw?path=... (relativo à origem atual).
+// Fallbacks para serviço estático simples (python -m http.server) ou file:// via HTTP.
+let CURRENT_SOURCE = "docs_logical.json";
+const CANDIDATES=[
+  RAW(`${PROJECT_BASE}/docs_logical.json`),
+  `../projects/${PROJECT_NAME}/docs_logical.json`,  // static server from NotaryMindAi root
+  `docs_logical.json`
+];
+
+async function loadFromUrl(url){
+  try {
+    const r = await fetch(url);
+    if(!r.ok) { alert('Erro ao carregar: ' + r.status); return null; }
+    CURRENT_SOURCE = url;
+    return await r.json();
+  } catch(e) {
+    alert('Erro: ' + e.message);
+    return null;
+  }
+}
+
+async function loadFromFile(file){
+  try {
+    const txt = await file.text();
+    const data = JSON.parse(txt);
+    CURRENT_SOURCE = file.name;
+    return data;
+  } catch(e) {
+    alert('Erro ao parsear JSON: ' + e.message);
+    return null;
+  }
+}
+
+function updateDocDetailsHeader(imageName) {
+  const docId = MODEL?.imgToDoc?.[imageName];
+  const doc = docId ? MODEL?.docById?.[docId] : null;
+  const header = document.getElementById("docDetailsHeader");
+  if(!header) return;
+
+  if(!doc) {
+    header.textContent = "";
+    return;
+  }
+
+  const tipo = doc.document_type || "-";
+  const data = (doc.document_date || []).join("; ") || "-";
+  const titulo = doc.title || "-";
+  const loc = doc.location?.[0] || "-";
+
+  // Buscar confiança OCR da imagem específica
+  let confidence = "-";
+  (doc.sources || []).forEach(f => {
+    if(f.image === imageName) {
+      confidence = f.ocr_confidence || "-";
+    }
+  });
+
+  header.innerHTML = `<div style="margin-bottom:2px">📄 <b>${esc(docId)}</b> - ${esc(tipo)}</div><div style="margin-bottom:2px">📅 ${esc(data)}</div><div style="margin-bottom:2px">📝 ${esc(titulo)}</div><div style="margin-bottom:2px">📍 ${esc(loc)}</div><div style="margin-bottom:2px;font-size:10px;opacity:0.8">📄 ${esc(imageName)} · OCR: ${esc(confidence)}</div><div style="font-weight:500;margin-top:6px">📝 Transcrição:</div>`;
+}
+
+async function loadTranscriptionForImage(imageName) {
+  try {
+    // Tentar /workspace/raw primeiro (mais confiável)
+    let jsonPath = RAW(`${PROJECT_BASE}/metadata/${imageName.replace(/\.jpg$/i, ".json")}`);
+    let response = await fetch(jsonPath);
+    
+    // Se falhar, tentar path relativo
+    if(!response.ok) {
+      jsonPath = `../../projects/${PROJECT_NAME}/metadata/${imageName.replace(/\.jpg$/i, ".json")}`; 
+      response = await fetch(jsonPath);
+    }
+
+    if(!response.ok) return "Transcrição não disponível";
+    const data = await response.json();
+    const txt = data.full_transcript || "Sem transcrição"; console.log("✓ Transcrição carregada para", imageName, txt.length, "chars"); return txt;
+  } catch(e) {
+    console.error("Erro ao carregar transcrição:", e);
+    return "Erro ao carregar transcrição";
+  }
+}
+
+async function load(){
+  for(const u of CANDIDATES){ try{ const r=await fetch(u); if(r.ok) { CURRENT_SOURCE=u; return await r.json(); } }catch(e){} }
+  return null;
+}
+
+async function reloadData(data){
+  if(!data) { document.getElementById("empty").innerHTML="<b>"+CONFIG.ui_strings.status.error_loading+"</b>"; return; }
+  document.getElementById("sourceModal").style.display="none";
+  document.getElementById("empty").style.display="none";
+  try {
+    DATA=data; 
+    MODEL=buildModel(data);
+    if(!MODEL) { console.error("buildModel returned falsy value"); return; }
+    nameToId=MODEL.nameToId||{};
+    if(!MODEL.people) { console.error("MODEL.people is undefined"); return; }
+    if(!MODEL.relations) { console.error("MODEL.relations is undefined"); return; }
+    if(!MODEL.properties) { console.error("MODEL.properties is undefined"); return; }
+  } catch(e) {
+    console.error("Error in reloadData:", e);
+    document.getElementById("empty").innerHTML="<b>"+CONFIG.ui_strings.status.error_processing+": " + e.message + "</b>";
+    return;
+  }
+  if(data.name) {
+    const archEl = document.getElementById("archiveName");
+    archEl.textContent = data.name;
+    const ts = data.timestamp ? new Date(data.timestamp).toLocaleString('pt-PT') : "-";
+    const model = data.model || "-";
+    const desc = data.description || "-";
+    const docs = data.total_logical_documents || 0;
+    const imgs = data.total_images || 0;
+
+    // Atualizar conteúdo do tooltip
+    const tooltipContent = document.getElementById("archiveTooltipContent");
+    if(tooltipContent) {
+      tooltipContent.textContent = `📄 ${docs} documents · 📄 ${imgs} images\n📅 ${ts}\n🤖 ${model}\n📝 ${desc}`;
+    }
+  }
+  document.getElementById("stats").textContent=`${MODEL.people.length} persons · ${MODEL.relations.length} relations · ${MODEL.properties.length} properties`;
+  document.getElementById("bar").style.display="flex";
+  setView("gen");
+
+  // Setup tooltip modal
+  setTimeout(() => {
+    const archEl = document.getElementById("archiveName");
+    const tooltipModal = document.getElementById("archiveTooltip");
+    const tooltipContent = document.getElementById("archiveTooltipContent");
+
+    if(!archEl || !tooltipModal) {
+      console.error("Elements missing:", {archEl, tooltipModal});
+      return;
+    }
+
+    archEl.addEventListener("click", (e) => {
+      e.stopPropagation();
+      console.log("Archive name clicked");
+      tooltipModal.style.display = tooltipModal.style.display === "none" ? "block" : "none";
+    });
+
+    document.addEventListener("click", (e) => {
+      if(e.target !== archEl && e.target !== tooltipModal && !tooltipModal.contains(e.target)) {
+        tooltipModal.style.display = "none";
+      }
+    });
+  }, 100);
+}
+
+function buildModel(data){
+  if(!data) return {people:[],relations:[],properties:[],docs:[],docById:{},imgToDoc:{},sameArticle:[],pById:{},nameToId:{},totalDocs:0,totalImgs:0};
+  const docs=data.documents||[];
+  const totalDocs = data.total_logical_documents || docs.length;
+  const totalImgs = data.total_images || 0;
+  // v2.0 schema: read from top-level persons/relations (not data.genealogy)
+  const persons_raw = data.persons || [];
+  const relations_raw = data.relations || [];
+  const imgToDoc={}; docs.forEach(d=>(d.sources||[]).forEach(f=>imgToDoc[f.image]=d.id));
+  const docById={}; docs.forEach(d=>docById[d.id]=d);
+
+  const people=persons_raw.map(p=>({...p,id:"P:"+norm(p.name)}));
+  const keysOf=p=>[p.name,...(p.variants||[]).map(v=>typeof v === 'string' ? v : v.name || v)].map(clean).map(norm).filter(k=>k.length>3);
+
+  people.forEach(p=>{
+    const K=keysOf(p), ds=new Set();
+    (p.source_images||[]).forEach(img=>{ if(imgToDoc[img]) ds.add(imgToDoc[img]); });
+    docs.forEach(d=>{
+      const nomes=norm((d.entities?.names||[]).join(" | "));
+      const tx=d.transaction?norm((d.transaction.buyer||"")+" | "+(d.transaction.seller||"")):"";
+      if(K.some(k=>nomes.includes(k)||tx.includes(k))) ds.add(d.id);
+    });
+    p._docs=[...ds];
+    const props=[];
+    docs.forEach(d=>{ const tx=d.transaction; if(!tx) return;
+      const comp=norm(tx.buyer||""), vend=norm(tx.seller||"");
+      let role=null;
+      if(K.some(k=>comp.includes(k))) role="bought";
+      else if(K.some(k=>vend.includes(k))) role="sold";
+      if(role) (d.properties||[]).forEach(pr=>props.push({...pr,doc:d.id,data:(d.document_date||[]).join("; "),role,value_tx:tx.value,buyer:tx.buyer||"",seller:tx.seller||""}));
+    });
+    p._props=props;
+  });
+
+  const properties=[];
+  docs.forEach(d=>(d.properties||[]).forEach((pr,i)=>properties.push({
+    ...pr,id:"PR:"+d.id+":"+i,doc:d.id,title:d.title,type:d.document_type,
+    date:(d.document_date||[]).join("; "),
+    buyer:d.transaction?.buyer||"",seller:d.transaction?.seller||"",nature:d.transaction?.nature||""
+  })));
+  // clusters por article matricial (mesma propriedade em docs diferentes)
+  const artMap={};
+  properties.forEach(pr=>{ const m=(pr.article||"").match(/^\s*(\d{1,5})\s*$/); if(m){ (artMap[m[1]]=artMap[m[1]]||[]).push(pr); }});
+  const sameArticle=Object.entries(artMap).filter(([a,l])=>new Set(l.map(x=>x.doc)).size>=2);
+
+  const pById=Object.fromEntries(people.map(p=>[p.id,p]));
+  // Cria um mapa inverso: nome normalizado -> pId, considerando variantes
+  const nameToId={};
+  people.forEach(p=>{
+    [p.name,...(p.variants||[]).map(v=>typeof v === 'string' ? v : v.name || v)].forEach(nm=>{
+      const nk=norm(nm);
+      if(nk.length>3 && !nameToId[nk]) nameToId[nk]=p.id;
+    });
+  });
+
+  // v2.0: use r.attribute instead of r.category; fallback to "other" if missing
+  const relacoes=relations_raw.map(r=>{
+    const deId = nameToId[norm(r.from)] || "P:"+norm(r.from);
+    const paraId = nameToId[norm(r.to)] || "P:"+norm(r.to);
+    const attribute = r.attribute || r.category || "other";  // fallback for legacy data
+    return {...r, deId, paraId, cat: attribute};
+  });
+  const relByDe={}; relacoes.forEach(r=>{ (relByDe[r.deId]=relByDe[r.deId]||[]).push(r); });
+  people.forEach(p=>{ p._sexo=inferSexo(p, relByDe[p.id]||[]); });
+  return {people,relations:relacoes,properties,docs,docById,imgToDoc,sameArticle,pById,nameToId,totalDocs,totalImgs};
+}
+
+// ---------- util SVG + pan/zoom ----------
+const el=(t,a={})=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+function svgPt(evt){ const p=svg.createSVGPoint(); p.x=evt.clientX; p.y=evt.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+
+let VB={x:0,y:0,w:1,h:1}, curW=1, curH=1, panning=null;
+function applyVB(){ svg.setAttribute("viewBox",`${VB.x} ${VB.y} ${VB.w} ${VB.h}`); }
+function worldFit(W,H){ curW=W;curH=H; const pad=CONFIG.layout.viewport_padding,cw=wrap.clientWidth||1,ch=wrap.clientHeight||1;
+  const wW=W+2*pad,wH=H+2*pad, s=Math.min(cw/wW,ch/wH), vw=cw/s, vh=ch/s;
+  VB={x:-pad-(vw-wW)/2,y:-pad-(vh-wH)/2,w:vw,h:vh}; applyVB(); }
+function refit(){
+  // Recalcular zoom baseado nos nós VISÍVEIS (não no layout completo)
+  const pos = view==="gen"?posGen:view==="doc"?posDoc:posProp;
+  const visibleIds = view==="gen" ? MODEL.people.filter(p=>!isoSet.has(p.id)).map(p=>p.id) : MODEL.people.map(p=>p.id);
+  if(visibleIds.length>0 && pos[visibleIds[0]]) {
+    zoomTo(pos,visibleIds);
+  } else {
+    worldFit(curW,curH);
+  }
+}
+function zoomTo(pos,ids){ const xs=[],ys=[]; ids.forEach(id=>{const p=pos[id]; if(p){xs.push(p.x,p.x+NODE_W);ys.push(p.y,p.y+NODE_H);}}); if(!xs.length)return;
+  const minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys),pad=70;
+  const wW=maxx-minx+2*pad,wH=maxy-miny+2*pad,cw=wrap.clientWidth||1,ch=wrap.clientHeight||1,s=Math.min(cw/wW,ch/wH),vw=cw/s,vh=ch/s;
+  VB={x:minx-pad-(vw-wW)/2,y:miny-pad-(vh-wH)/2,w:vw,h:vh}; applyVB(); }
+// roda do rato = zoom in/out centrado no cursor
+svg.addEventListener("wheel",e=>{ e.preventDefault(); const pt=svgPt(e), f=e.deltaY<0?0.85:1.15;
+  VB.x=pt.x-(pt.x-VB.x)*f; VB.y=pt.y-(pt.y-VB.y)*f; VB.w*=f; VB.h*=f; applyVB(); },{passive:false});
+// pan: botão do meio (em qualquer sítio) ou botão esquerdo no fundo
+svg.addEventListener("mousedown",e=>{ const hit=e.target.closest(".node")||e.target.closest("path[data-a]");
+  if(e.button===1 || (e.button===0 && !hit)){ e.preventDefault(); panning={sx:e.clientX,sy:e.clientY,vx:VB.x,vy:VB.y}; svg.classList.add("panning"); } });
+svg.addEventListener("auxclick",e=>{ if(e.button===1) e.preventDefault(); });
+// clique numa aresta = abre a relação / documento
+svg.addEventListener("click",e=>{ if(dragCtx||panning)return; const p=e.target.closest("path[data-a]"); if(p) showRelation(p); });
+// hover numa aresta = etiqueta com o tipo de relação
+const tip=document.createElement("div"); tip.id="tip"; document.body.appendChild(tip);
+function edgeName(id){ return !id?"":id.startsWith("PR:")?(MODEL.properties.find(x=>x.id===id)?.description||id):id.startsWith("DL:")?id.slice(3):(MODEL.pById[id]?.name||id.slice(2)); }
+function tipText(p){ const cat=p.dataset.cat,rel=p.dataset.rel,source=p.dataset.source,status=p.dataset.status,conf=p.dataset.conf;
+  let tip = `${edgeName(p.dataset.a)} - ${rel||CAT_LABEL[cat]||cat} → ${edgeName(p.dataset.b)}`;
+  if(status) tip += ` (${status})`;
+  if(conf) tip += ` 🎯 ${conf} confidence`;
+  if(source) tip += `  [${source}]`;
+  return tip; }
+svg.addEventListener("mousemove",e=>{ if(panning||dragCtx){tip.style.display="none";return;}
+  const p=e.target.closest && e.target.closest("path[data-a]");
+  if(p){ tip.textContent=tipText(p); tip.style.display="block"; tip.style.left=(e.clientX+14)+"px"; tip.style.top=(e.clientY+14)+"px"; }
+  else tip.style.display="none"; });
+svg.addEventListener("mouseleave",()=>{ tip.style.display="none"; });
+
+// ---------- drag de nós (estado global) ----------
+let curPos=null,curSnap=false,curEdges=[],dragCtx=null;
+function updateEdges(){ curEdges.forEach(p=>{ const a=p.dataset.a,b=p.dataset.b; if(!curPos[a]||!curPos[b])return;
+  if(view==="gen"){ p.setAttribute("d",edgePathDir(a,b)); }
+  else{ const aC={x:curPos[a].x+NODE_W/2,y:curPos[a].y+NODE_H/2},bC={x:curPos[b].x+NODE_W/2,y:curPos[b].y+NODE_H/2},mx=(aC.x+bC.x)/2; p.setAttribute("d",`M ${aC.x} ${aC.y} C ${mx} ${aC.y}, ${mx} ${bC.y}, ${bC.x} ${bC.y}`);} }); }
+function bindView(gN,pos,snap,edges){ curPos=pos;curSnap=snap;curEdges=edges;
+  gN.addEventListener("mousedown",e=>{ if(e.button!==0)return; const g=e.target.closest(".node"); if(!g)return;
+    const id=g.dataset.id,p=svgPt(e); dragCtx={id,g,dx:p.x-pos[id].x,dy:p.y-pos[id].y,moved:false,sx:e.clientX,sy:e.clientY}; g.classList.add("drag"); gN.appendChild(g); e.preventDefault(); }); }
+window.addEventListener("mousemove",e=>{
+  if(panning){ const s=VB.w/(wrap.clientWidth||1); VB.x=panning.vx-(e.clientX-panning.sx)*s; VB.y=panning.vy-(e.clientY-panning.sy)*s; applyVB(); return; }
+  if(dragCtx){ if(!dragCtx.moved){ if(Math.hypot(e.clientX-dragCtx.sx,e.clientY-dragCtx.sy)<=4) return; dragCtx.moved=true; }
+    const p=svgPt(e); curPos[dragCtx.id]={x:p.x-dragCtx.dx,y:p.y-dragCtx.dy}; dragCtx.g.setAttribute("transform",`translate(${curPos[dragCtx.id].x},${curPos[dragCtx.id].y})`); updateEdges(); }
+});
+window.addEventListener("mouseup",()=>{
+  if(panning){ panning=null; svg.classList.remove("panning"); }
+  if(dragCtx){ if(curSnap){ let best=rowYs[0],bd=1e9; rowYs.forEach(y=>{const d=Math.abs(y-curPos[dragCtx.id].y);if(d<bd){bd=d;best=y;}}); curPos[dragCtx.id].y=best; dragCtx.g.setAttribute("transform",`translate(${curPos[dragCtx.id].x},${best})`); updateEdges(); }
+    dragCtx.g.classList.remove("drag"); const mv=dragCtx.moved,id=dragCtx.id; dragCtx=null; if(!mv) selectNode(id); }
+});
+
+// ---------- GENEALOGIA ----------
+function computeLevels(){
+  const lv={}; MODEL.people.forEach(p=>lv[p.id]=0);
+  const fil=[],pair=[],her=[],sale=[],mortgage=[];
+  MODEL.relations.forEach(r=>{
+    if(!MODEL.pById[r.deId]||!MODEL.pById[r.paraId]) return;
+    if(r.cat==="filiation"||r.cat==="descent") fil.push([r.deId,r.paraId]);
+    else if(r.cat==="marriage"||r.cat==="kinship") pair.push([r.deId,r.paraId]);
+    else if(r.cat==="inheritance") her.push([r.deId,r.paraId]);
+    else if(r.cat==="godparent") fil.push([r.deId,r.paraId]);  // padrinho funciona como genealogia: padrinho é acima, afilhado abaixo
+    else if(r.cat==="sale") sale.push([r.deId,r.paraId]);  // de=seller, para=buyer
+    else if(r.cat==="mortgage") mortgage.push([r.deId,r.paraId]);  // de=devedor, para=credor
+  });
+  // Falecidos ficam no nível 0 por default
+  her.forEach(([herdeiro,falecido])=>{ lv[falecido]=0; });
+  let changed=true;
+  for(let it=0;it<MODEL.people.length+5&&changed;it++){changed=false;
+    fil.forEach(([c,pa])=>{const v=(lv[pa]||0)+1; if(v>lv[c]){lv[c]=v;changed=true;}});
+    pair.forEach(([a,b])=>{const m=Math.max(lv[a],lv[b]); if(lv[a]<m){lv[a]=m;changed=true;} if(lv[b]<m){lv[b]=m;changed=true;}});
+    her.forEach(([herdeiro,falecido])=>{ if(lv[herdeiro]<=lv[falecido]){ lv[herdeiro]=lv[falecido]+1; changed=true; } });
+  }
+  // Posicionar apenas selleres/devedores sem genealogia core: linha -1 (acima de tudo)
+  // Herdeiros ficam estruturalmente ligados aos falecidos (não são movidos)
+  const coreGen = new Set(['filiation','descent','kinship']);
+  sale.concat(mortgage).forEach(([tx,pair])=>{
+    const temCore = MODEL.relations.some(r=>(r.deId===tx||r.paraId===tx)&&coreGen.has(r.cat));
+    if(!temCore) lv[tx] = -1;  // seller/devedor isolado: linha de topo
+  });
+  // Posicionar apenas buyeres/credores (não falecidos) que só têm transacionais: linha maxLv+1 (abaixo de tudo)
+  const maxLv = Math.max(...Object.values(lv).filter(v=>v>-1));
+  sale.concat(mortgage).forEach(([tx,pair])=>{
+    const temCore = MODEL.relations.some(r=>(r.deId===pair||r.paraId===pair)&&coreGen.has(r.cat));
+    if(!temCore) lv[pair] = maxLv + 1;  // buyer/credor isolado: linha de fundo
+  });
+  return lv;
+}
+function layoutGen(){
+  const lv=computeLevels();
+  // Recalcular levels DEPOIS de computeLevels (pode ter -1 e maxLv+1)
+  const allLevels = [...new Set(Object.values(lv))];
+  const levels = allLevels.sort((a,b)=>a-b);
+  const rows={}; MODEL.people.forEach(p=>{(rows[lv[p.id]]=rows[lv[p.id]]||[]).push(p);});
+
+  const GAPX=CONFIG.layout.genealogy.gap_x, GAPY=CONFIG.layout.genealogy.gap_y, PAD=CONFIG.layout.genealogy.padding, COUPLE_GAP=CONFIG.layout.genealogy.couple_gap, SIB_GAP=CONFIG.layout.genealogy.sibling_gap;
+  // Criar mapa de nível → Y (considerando níveis negativos e positivos)
+  const levelToY = {};
+  const minLevel = Math.min(...levels);
+  levels.forEach((l, idx) => {
+    levelToY[l] = PAD + idx * (NODE_H + GAPY);
+  });
+  rowYs.length=0;
+  levels.forEach(l => rowYs.push(levelToY[l]));
+
+  // Mapas de relações
+  const parents={}, children={}, spouses={}, sibs={};
+  MODEL.people.forEach(p=>{parents[p.id]=[]; children[p.id]=[]; spouses[p.id]=[]; sibs[p.id]=[];});
+  MODEL.relations.forEach(r=>{ if(!MODEL.pById[r.deId]||!MODEL.pById[r.paraId]) return;
+    if(r.cat==="filiation"||r.cat==="descent"||r.cat==="inheritance"){ parents[r.deId].push(r.paraId); children[r.paraId].push(r.deId); }
+    if(r.cat==="marriage"){ spouses[r.deId].push(r.paraId); spouses[r.paraId].push(r.deId); }
+    if(r.cat==="kinship"){ sibs[r.deId].push(r.paraId); sibs[r.paraId].push(r.deId); }
+  });
+  const order={}; levels.forEach(l=>{ order[l]=(rows[l]||[]).map(p=>p.id).filter(id=>!isoSet.has(id)); });
+  const posIndex=l=>{ const m={}; (order[l]||[]).forEach((id,i)=>m[id]=i); return m; };
+
+  // Ordenação INICIAL: juntar casais lado a lado
+  levels.forEach(l=>{
+    const arr = order[l];
+    let i = 0;
+    while(i < arr.length-1){
+      const spouse = spouses[arr[i]]?.[0];
+      if(spouse && arr.includes(spouse)){
+        const j = arr.indexOf(spouse);
+        if(j > i+1){
+          arr.splice(j, 1);
+          arr.splice(i+1, 0, spouse);  // Colocar cônjuge imediatamente a seguir
+        }
+      }
+      i++;
+    }
+    order[l] = arr;
+  });
+
+  // Ordenação ROBUSTA: 8 iterações de barycenter (reduzido porque casais já estão juntos)
+  for(let iter=0; iter<8; iter++){
+    const downward = iter%2===0;
+    const seq = downward? levels : levels.slice().reverse();
+    seq.forEach(l=>{
+      const nbLevel = downward? l-1 : l+1;
+      const idx = order[nbLevel]? posIndex(nbLevel) : null;
+      const bary={};
+      order[l].forEach(id=>{
+        const refs = downward? parents[id] : children[id];
+        const vals = idx? refs.map(r=>idx[r]).filter(v=>v!=null).sort((a,b)=>a-b) : [];
+        bary[id] = vals.length? vals[Math.floor(vals.length/2)] : null;  // Mediana
+      });
+      order[l].sort((a,b)=>{ const da=bary[a], db=bary[b];
+        if(da==null||db==null) return 0; return da-db; });
+
+      // Greedy swaps: melhorar localmente MAS não separar casais
+      let improved=true, tries=0;
+      while(improved && tries++<5){
+        improved=false;
+        for(let i=0; i<order[l].length-1; i++){
+          const a=order[l][i], b=order[l][i+1];
+          // Não separar casais: se são um casal, não trocar
+          if(spouses[a].includes(b) || spouses[b].includes(a)) continue;
+
+          const cross_ab = countEdgeCrosses(order[l], i, i+1, downward, parents, children, posIndex(nbLevel));
+          [order[l][i],order[l][i+1]]=[b,a];
+          const cross_ba = countEdgeCrosses(order[l], i, i+1, downward, parents, children, posIndex(nbLevel));
+          // Trocar só se reduz MUITO cruzamentos (threshold alto para manter casais juntos)
+          if(cross_ba < cross_ab - 2) improved=true;  // Precisa de melhor de 2 cruzamentos
+          else [order[l][i],order[l][i+1]]=[a,b];
+        }
+      }
+    });
+  }
+
+  // Posicionamento X com atração para vizinhos
+  const baseX={};
+  const gapBetween=(id,prev)=> spouses[id].includes(prev)?COUPLE_GAP : sibs[id].includes(prev)?SIB_GAP : GAPX;
+
+  // Pack X - mais spread out: cada nó começa onde termina o anterior
+  levels.forEach(l=>{
+    let x = PAD;  // Começar com padding
+    order[l].forEach((id,i)=>{
+      baseX[id] = x;
+      x += NODE_W + gapBetween(id, order[l][i+1]||null);  // Avançar para próximo
+    });
+  });
+
+  // Refinar X com squeeze FORTE para pais-filhos: alinhar filhos com pais
+  for(let pass=0; pass<4; pass++){
+    levels.forEach(l=>{
+      const arr=order[l];
+      arr.forEach(id=>{
+        // Pais/filhos: atração FORTE (80%)
+        const pf = [...(parents[id]||[]),...(children[id]||[])].map(r=>baseX[r]).filter(v=>v!=null);
+        // Cônjuges: atração MUITO FORTE (95%)
+        const sp = (spouses[id]||[]).map(r=>baseX[r]).filter(v=>v!=null);
+
+        let target = baseX[id];
+        if(sp.length) target = sp.reduce((a,b)=>a+b,0)/sp.length*0.95 + baseX[id]*0.05;  // 95% para cônjuge
+        else if(pf.length) target = pf.reduce((a,b)=>a+b,0)/pf.length*0.80 + baseX[id]*0.20;  // 80% para pai/filho
+
+        baseX[id] = target;
+      });
+    });
+    // Repack forte: manter gaps más garantir que casais juntos e filhos alinhados
+    levels.forEach(l=>{ let x=PAD; order[l].forEach((id,i)=>{ baseX[id]=Math.max(x, baseX[id]); x=baseX[id]+NODE_W+gapBetween(id, order[l][i+1]||null); }); });
+  }
+
+  // Gerar posGen
+  for(const k in posGen) delete posGen[k];  // limpar posGen anterior
+  const allX = Object.values(baseX).filter(v=>v!=null);
+  const shift = 0;  // baseX já inclui PAD, não precisa shift adicional
+
+  MODEL.people.forEach(p=>{
+    if(!isoSet.has(p.id)){
+      const x = baseX[p.id]!=null ? baseX[p.id]+shift : PAD;
+      const y = levelToY[lv[p.id]];
+      if(y!=null) posGen[p.id]={x, y};
+    }
+  });
+
+  const W = (allX.length>0 ? Math.max(...allX) : 0) + NODE_W + PAD;
+  const visibleLevels = levels.filter(l => MODEL.people.filter(p=>!isoSet.has(p.id)).some(p=>lv[p.id]===l));
+  const H = PAD*2 + Math.max(1, visibleLevels.length)*(NODE_H+GAPY);
+  return {W, H};
+}
+
+// Contar cruzamentos de arestas entre duas posições
+function countEdgeCrosses(order, i1, i2, downward, parents, children, idx){
+  if(!idx) return 0;
+  const idA=order[i1], idB=order[i2];
+  const refsA = downward? parents[idA] : children[idA];
+  const refsB = downward? parents[idB] : children[idB];
+  let cross=0;
+  refsA.forEach(rA=>{ refsB.forEach(rB=>{
+    const posA=idx[rA], posB=idx[rB];
+    if(posA!=null && posB!=null && ((posA<posB && i1>i2) || (posA>posB && i1<i2))) cross++;
+  });});
+  return cross;
+}
+
+function edgePathGen(a,b,same){
+  const A=posGen[a],B=posGen[b];
+  if(same){ const L=A.x<B.x?A:B,R=A.x<B.x?B:A; return `M ${L.x+NODE_W} ${L.y+NODE_H/2} L ${R.x} ${R.y+NODE_H/2}`; }
+  const t=A.y<=B.y?A:B, bo=A.y<=B.y?B:A;
+  const x1=t.x+NODE_W/2,y1=t.y+NODE_H,x2=bo.x+NODE_W/2,y2=bo.y,my=(y1+y2)/2;
+  return `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
+}
+// desenha SEMPRE de a→b (respeita direção lógica; marker-end fica no destino b)
+function edgePathDir(a,b){
+  const A=posGen[a],B=posGen[b]; if(!A||!B) return "";
+  const sameY=Math.abs(A.y-B.y)<1;
+  if(sameY){
+    if(A.x<=B.x) return `M ${A.x+NODE_W} ${A.y+NODE_H/2} L ${B.x} ${B.y+NODE_H/2}`;
+    return `M ${A.x} ${A.y+NODE_H/2} L ${B.x+NODE_W} ${B.y+NODE_H/2}`;
+  }
+  const x1=A.x+NODE_W/2, x2=B.x+NODE_W/2;
+  let y1,y2;
+  if(A.y<B.y){ y1=A.y+NODE_H; y2=B.y; }   // a acima → sai do fundo de a, entra no topo de b
+  else { y1=A.y; y2=B.y+NODE_H; }           // a abaixo → sai do topo de a, entra no fundo de b
+  const my=(y1+y2)/2;
+  return `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
+}
+function renderGen(){
+  // Recalcular isoSet AQUI (nós isolados que devem ser ocultados)
+  const coreGenealogy = new Set(['filiation', 'descent', 'kinship', 'godparent']);
+  const transactional = new Set(['sale', 'mortgage', 'inheritance']);
+  isoSet=new Set(MODEL.people.filter(p=>{
+    const personRels = MODEL.relations.filter(r=>(r.deId===p.id||r.paraId===p.id));
+    if(personRels.length===0) return true;  // sem relação nenhuma
+    // Tem genealogia core (filhos/pais/irmãos/padrinhos)? Não isolada
+    if(personRels.some(r=>coreGenealogy.has(r.cat))) return false;
+    // Tem relação transacional VISÍVEL? Não isolada
+    if(personRels.some(r=>transactional.has(r.cat)&&!hidden.has(r.cat))) return false;
+    // Tem casamento com alguém que tem genealogia core? Não isolada
+    const spouseIds = personRels.filter(r=>r.cat==="marriage").map(r=>r.deId===p.id?r.paraId:r.deId);
+    const spouseHasCore = spouseIds.some(spouseId=>MODEL.relations.some(r=>
+      (r.deId===spouseId||r.paraId===spouseId) && coreGenealogy.has(r.cat)
+    ));
+    if(spouseHasCore) return false;
+    // Caso contrário: isolada (casamento sem descendencia + transacionais ocultos)
+    return true;
+  }).map(p=>p.id));
+
+  const {W,H}=layoutGen(); svg._H=H;
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.innerHTML="";
+  // adicionar markers de seta
+  const defs=el("defs");
+  for(const [color,hex] of Object.entries({filiation:"#2563eb",inheritance:"#7c3aed",godparent:"#0891b2",purchase:"#dc2626"})){
+    defs.appendChild(el("marker",{id:`arrow-${color}`,markerWidth:9,markerHeight:9,refX:9,refY:3,orient:"auto",markerUnits:"strokeWidth",viewBox:"0 0 10 6"}));
+    defs.querySelector(`#arrow-${color}`).appendChild(el("path",{d:"M0,0 L0,6 L9,3 z",fill:hex}));
+  }
+  svg.appendChild(defs);
+  const gGrid=el("g"); rowYs.forEach(y=>gGrid.appendChild(el("line",{x1:10,x2:W-10,y1:y+NODE_H/2,y2:y+NODE_H/2,class:"grid"}))); svg.appendChild(gGrid);
+  const gE=el("g"), gHit=el("g"), gN=el("g"); svg.appendChild(gE); svg.appendChild(gHit); svg.appendChild(gN);
+
+  const edges=[];
+  MODEL.relations.forEach(r=>{
+    if(hidden.has(r.cat)) return;
+    if(!posGen[r.deId]||!posGen[r.paraId]) return;
+    if(!posGen[r.deId].y || !posGen[r.paraId].y) return;  // pula se Y está undefined
+    if(isoSet.has(r.deId)||isoSet.has(r.paraId)) return;  // pula se um nó está oculto
+    const same=(r.cat==="marriage"||r.cat==="kinship");
+    const color=CAT_COLOR[r.cat]||CAT_COLOR.other;
+    const _rl=norm(r.relation||""); const _sp=/(divorc|vi[uú]v|separ|ex-mulher|ex-marido|ex-esposa)/.test(_rl);
+    // Dashing based on source and inference confidence (v2.0 schema)
+    let dash = "0";
+    if(_sp) dash = "9 4";  // Divorce/widowed: heavy dash
+    else if(r.source==="glossary") dash = "2 4";  // Glossary source: short dash
+    else if(r.source=="inferred" || r.inferedbyai) {
+      // Inferred relations: dash based on confidence level (default to medium if missing)
+      const conf = r.inference_confidence || "medium";
+      if(conf === "high") dash = "4";
+      else if(conf === "medium") dash = "3 5";
+      else if(conf === "low") dash = "2 4";
+    } else if(r.cat==="descent") dash = "6 5";  // Descent (genealogical inferred): medium dash
+    // Direção lógica das setas: pai→filho, falecido→herdeiro, padrinho→afilhado, seller→buyer
+    const isGenealogical=(r.cat==="filiation"||r.cat==="descent"||r.cat==="inheritance");  // herdação é genealogia but inverted
+    const isTransactional=(r.cat==="sale"||r.cat==="mortgage"||r.cat==="godparent");  // padrinho usa de→para
+    const logicalArrow=isGenealogical||isTransactional?r.cat:null;
+    if(logicalArrow){
+      const [fromId,toId] = isGenealogical ? [r.paraId,r.deId] : [r.deId,r.paraId];  // gen: para→de, tx: de→para
+      mkEdge(gE,gHit,edges,edgePathDir(fromId,toId),color,dash,{a:fromId,b:toId,cat:r.cat,source:r.source||"",rel:r.relation||"",status:r.status||"",conf:r.inference_confidence||""},true,logicalArrow);
+    } else {
+      mkEdge(gE,gHit,edges,edgePathGen(r.deId,r.paraId,same),color,dash,{a:r.deId,b:r.paraId,cat:r.cat,source:r.source||"",rel:r.relation||"",status:r.status||"",conf:r.inference_confidence||""},true,null);
+    }
+  });
+  // Opção A: relações transacionais vêm da genealogia (categoria sale/mortgage).
+  // O bloco antigo das properties é REMOVIDO (não mais necessário).
+
+  MODEL.people.forEach(p=>{
+    if(isoSet.has(p.id)) return;  // pula nós ocultos (transacionais escondidos ou isolados)
+    if(!posGen[p.id]) return;  // pula se sem posição
+    const {x,y}=posGen[p.id];
+    const g=el("g",{class:"node",transform:`translate(${x},${y})`}); g.dataset.id=p.id;
+    g.appendChild(el("rect",{width:NODE_W,height:NODE_H,rx:9,fill:SEXO_FILL[p._sexo||""]}));
+    const nm=el("text",{class:"nm",x:NODE_W/2,y:19,"text-anchor":"middle"}); nm.textContent=p.name; g.appendChild(nm);
+    const pp=el("text",{class:"pp",x:NODE_W/2,y:35,"text-anchor":"middle"}); pp.textContent=(p.role||"").slice(0,44); g.appendChild(pp);
+    const vidas=[p.birth?"n. "+p.birth:"",p.death?"†"+p.death:""].filter(Boolean).join("  ");
+    const su=el("text",{class:"su",x:NODE_W/2,y:50,"text-anchor":"middle"}); su.textContent=vidas; g.appendChild(su);
+    gN.appendChild(g);
+  });
+  bindView(gN,posGen,true,edges);
+  applyFocus();
+  // Zoom automático: ajustar ao conteúdo real dos nós VISÍVEIS
+  const visibleIds = MODEL.people.filter(p=>!isoSet.has(p.id)).map(p=>p.id);
+  if(visibleIds.length>0){
+    zoomTo(posGen,visibleIds);
+  } else {
+    worldFit(W,H);
+  }
+}
+
+// ---------- PROPRIEDADES ----------
+function layoutProp(onlyProps){
+  const GAPY=CONFIG.layout.properties.gap_y, COLW=CONFIG.layout.properties.col_width, PADX=CONFIG.layout.properties.pad_x, PADY=CONFIG.layout.properties.pad_y;
+  // colunas por localização
+  const locKey=pr=>norm(pr.location||"-").split(",")[0].trim()||"-";
+  const groups={}; MODEL.properties.forEach(pr=>{(groups[locKey(pr)]=groups[locKey(pr)]||[]).push(pr);});
+  const locNames=Object.keys(groups).sort();
+  // pessoas (buyer/seller) só se !onlyProps
+  const persons=new Map();
+  if(!onlyProps){ MODEL.properties.forEach(pr=>{ [pr.buyer,pr.seller].forEach(nm=>{ const c=clean(nm); if(c) persons.set(norm(c),c); }); }); }
+  // layout: coluna 0 = selleres, 1..n = grupos de properties, última = buyeres
+  let x=PADX, H=PADY;
+  const colX={};
+  const vend=[...persons.values()]; // simplificação: pessoas numa coluna à esquerda
+  // esquerda: pessoas
+  if(!onlyProps && vend.length){ colX.persons=x; x+=COLW+40; }
+  locNames.forEach(l=>{ colX[l]=x; x+=COLW+30; });
+  const W=x+PADX;
+  // posicionar properties por grupo
+  let maxY=0;
+  locNames.forEach(l=>{ let y=PADY; groups[l].forEach(pr=>{ if(!posProp[pr.id]) posProp[pr.id]={x:colX[l],y}; y+=NODE_H+GAPY; }); maxY=Math.max(maxY,y); });
+  // posicionar pessoas
+  if(!onlyProps && vend.length){ let y=PADY; vend.forEach(nm=>{ const id="X:"+norm(nm); if(!posProp[id]) posProp[id]={x:colX.persons,y}; y+=NODE_H+GAPY; }); maxY=Math.max(maxY,y); }
+  return {W,H:Math.max(maxY+PADY,300),groups,locNames,persons,colX};
+}
+function centerOf(id){ const p=posProp[id]; return p?{x:p.x+NODE_W/2,y:p.y+NODE_H/2}:null; }
+function renderProp(){
+  const onlyProps=document.getElementById("onlyProps")?.checked;
+  const {W,H,persons}=layoutProp(onlyProps); svg._H=H;
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.innerHTML="";
+  const gE=el("g"), gHit=el("g"), gN=el("g"); svg.appendChild(gE); svg.appendChild(gHit); svg.appendChild(gN);
+  const edges=[];
+  const line=(aC,bC,color,dash,ds)=>{ if(!aC||!bC)return; const mx=(aC.x+bC.x)/2;
+    return mkEdge(gE,gHit,edges,`M ${aC.x} ${aC.y} C ${mx} ${aC.y}, ${mx} ${bC.y}, ${bC.x} ${bC.y}`,color,dash,ds,false); };
+
+  if(!onlyProps){
+    MODEL.properties.forEach(pr=>{
+      if(hidden.has("purchase")) return;
+      const prC=centerOf(pr.id);
+      if(pr.seller){ line(centerOf("X:"+norm(clean(pr.seller))),prC,CAT_COLOR.purchase,"0",{a:"X:"+norm(clean(pr.seller)),b:pr.id,cat:"sale",rel:"sells to",doc:pr.document||""}); }
+      if(pr.buyer){ line(prC,centerOf("X:"+norm(clean(pr.buyer))),CAT_COLOR.purchase,"0",{a:pr.id,b:"X:"+norm(clean(pr.buyer)),cat:"purchase",rel:"purchase",doc:pr.document||""}); }
+    });
+  } else {
+    MODEL.sameArticle.forEach(([art,list])=>{ for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){ line(centerOf(list[i].id),centerOf(list[j].id),"#0891b2","5 4",{a:list[i].id,b:list[j].id,cat:"mesmo",rel:"mesmo art. "+art}); } });
+  }
+  // nós propriedade
+  MODEL.properties.forEach(pr=>{
+    const p=posProp[pr.id]; const g=el("g",{class:"node",transform:`translate(${p.x},${p.y})`}); g.dataset.id=pr.id;
+    g.appendChild(el("rect",{width:NODE_W,height:NODE_H,rx:8,fill:"#fef9c3"}));
+    const nm=el("text",{class:"nm",x:10,y:18}); nm.textContent=(pr.description||"").slice(0,30); g.appendChild(nm);
+    const pp=el("text",{class:"pp",x:10,y:34}); pp.textContent=(pr.location||"").slice(0,36); g.appendChild(pp);
+    const su=el("text",{class:"su",x:10,y:49}); su.textContent=[pr.article?"art. "+pr.article:"",pr.value||"",pr.document].filter(Boolean).join(" · ").slice(0,40); g.appendChild(su);
+    gN.appendChild(g);
+  });
+  // nós pessoa
+  if(!onlyProps){ persons.forEach((nm)=>{ const id="X:"+norm(nm); const p=posProp[id]; if(!p)return;
+    const g=el("g",{class:"node",transform:`translate(${p.x},${p.y})`}); g.dataset.id=id;
+    g.appendChild(el("ellipse",{cx:NODE_W/2,cy:NODE_H/2,rx:NODE_W/2,ry:NODE_H/2-6,fill:"#dbeafe"}));
+    const nm2=el("text",{class:"nm",x:NODE_W/2,y:NODE_H/2+4,"text-anchor":"middle"}); nm2.textContent=nm.slice(0,26); g.appendChild(nm2);
+    gN.appendChild(g);
+  }); }
+  bindView(gN,posProp,false,edges);
+  applyFocus();
+  worldFit(W,H);
+}
+
+// ---------- foco / drilldown ----------
+function neighbors(id){ const set=new Set([id]);
+  if(view==="gen"){ MODEL.relations.forEach(r=>{ if(r.deId===id)set.add(r.paraId); if(r.paraId===id)set.add(r.deId); }); }
+  else { svg.querySelectorAll("path[data-a]").forEach(p=>{ if(p.dataset.a===id)set.add(p.dataset.b); if(p.dataset.b===id)set.add(p.dataset.a); }); }
+  return set;
+}
+function applyFocus(){
+  document.getElementById("clearFocus").style.display=focusId?"":"none";
+  const keep=focusId?neighbors(focusId):null;
+  svg.querySelectorAll(".node").forEach(g=>{ g.classList.toggle("sel",g.dataset.id===focusId);
+    g.classList.toggle("dim",!!keep&&!keep.has(g.dataset.id)); });
+  svg.querySelectorAll("path[data-a]").forEach(p=>{ const on=!keep||(keep.has(p.dataset.a)&&keep.has(p.dataset.b));
+    p.classList.toggle("dim",!on); });
+}
+function selectNode(id){ focusId=id; applyFocus(); (id.startsWith("DL:")?showDoc:id.startsWith("PR:")?showProp:showPerson)(id); }
+
+// ---------- painel de detalhes ----------
+function openPanel(html,drillId){ panel.innerHTML=`<button class="close">${CONFIG.ui_strings.buttons.close.split(" ")[1]}</button>`+html; panel.classList.add("show");
+
+  // Listener para ícones de imagem diretos - clique não expande document
+  panel.querySelectorAll(".img-link-icon").forEach(icon => {
+    icon.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      const firstImg = icon.dataset.first;
+      const imagesStr = icon.dataset.images;
+      const images = imagesStr ? imagesStr.split("|") : [];
+      if(images.length > 0) {
+        openImageViewer(firstImg, images, 0);
+      }
+    }, true);  // capture phase
+  });
+  // listeners para h4 colapsáveis e botões de transcrição/resumo
+  panel.querySelectorAll("h4[style*='cursor:pointer']").forEach(h4=>{
+    h4.onclick=(e)=>{
+      e.preventDefault();
+      const next=h4.nextElementSibling;
+      if(next && (next.hasAttribute("data-transcr") || next.hasAttribute("data-obs") || next.hasAttribute("data-files"))){
+        const isHidden=next.style.display==="none";
+        next.style.display=isHidden?"block":"none";
+        const marker=h4.querySelector("[data-expand]");
+        if(marker) marker.textContent=isHidden?"▼":"▶";
+      }
+    };
+    // botão copiar
+    const copyBtn=h4.nextElementSibling?.querySelector("[data-copy]");
+    if(copyBtn){
+      copyBtn.onclick=(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        const content=h4.nextElementSibling.dataset.content;
+        navigator.clipboard.writeText(content).then(()=>{
+          const orig=copyBtn.textContent;
+          copyBtn.textContent=CONFIG.ui_strings.status.copied;
+          setTimeout(()=>{ copyBtn.textContent=orig; },2000);
+        });
+      };
+    }
+    // botão expandir fullscreen
+    const expandBtn=h4.nextElementSibling?.querySelector("[data-fullscreen]");
+    if(expandBtn){
+      expandBtn.onclick=(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        const content=h4.nextElementSibling.dataset.content;
+        const title=h4.textContent.trim();
+        const modal=document.createElement("div");
+        modal.style.cssText=`position:fixed;top:0;left:0;width:100%;height:100%;background:#000000dd;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px`;
+        modal.innerHTML=`<div style="background:#fff;width:95%;max-height:95%;border-radius:8px;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,0.3)">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid #ddd;flex-shrink:0">
+            <h3 style="margin:0;flex:1">${esc(title)}</h3>
+            <div style="display:flex;gap:8px">
+              <button style="padding:8px 16px;background:#3b82f6;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600">Copiar Tudo</button>
+              <button style="padding:8px 16px;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600">Fechar</button>
+            </div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:16px;background:#f9fafb;white-space:pre-wrap;font-family:monospace;font-size:0.9em;line-height:1.5;min-height:0">${esc(content)}</div>
+        </div>`;
+        document.body.appendChild(modal);
+        const copyBtn = modal.querySelector("button:first-of-type");
+        const closeBtn = modal.querySelector("button:last-of-type");
+        copyBtn.onclick=()=>{
+          navigator.clipboard.writeText(content).then(()=>{
+            copyBtn.textContent=CONFIG.ui_strings.status.copied;
+            setTimeout(()=>{ copyBtn.textContent=CONFIG.ui_strings.buttons.copy_all; },2000);
+          }).catch(err=>console.error("Erro ao copiar:", err));
+        };
+        closeBtn.onclick=()=>{ modal.remove(); };
+        modal.onclick=(ev)=>{ if(ev.target===modal) modal.remove(); };
+      };
+    }
+  });
+  panel.querySelector(".close").onclick=closePanel;
+  const b=panel.querySelector(".btn"); if(b&&drillId) b.onclick=()=>drill(drillId); }
+function closePanel(){ panel.classList.remove("show"); focusId=null; applyFocus(); }
+
+function personByNodeId(id){ if(id.startsWith("P:")) return MODEL.pById[id];
+  // pessoa da vista de properties (X:) → tenta casar com pessoa da genealogia
+  const nm=id.slice(2); return MODEL.people.find(p=>[p.name,...(p.variants||[]).map(v=>typeof v === 'string' ? v : v.name || v)].map(clean).map(norm).some(k=>k===nm))||{nome:nm,_props:[],_docs:[]}; }
+function showPerson(id){
+  const p=personByNodeId(id); const dById=MODEL.docById;
+  let h=`<h2>${esc(p.name)}</h2>`;
+  if(p.role) h+=`<div class="role">${esc(p.role)}</div>`;
+  const vidas=[p.birth?`n. ${p.birth}`:"",p.baptism?`bapt. ${p.baptism}`:"",p.death?`† ${p.death}`:""].filter(Boolean).join(" · ");
+  if(vidas) h+=`<div><span class="k">Datas:</span> ${esc(vidas)}</div>`;
+  if(p.variants?.length) h+=`<div><span class="k">Variantes:</span> ${esc(p.variants.map(v=>typeof v === 'string' ? v : v.name || v).join("; "))}</div>`;
+  if(p.sexo||p._sexo) h+=`<div><span class="k">Sexo:</span> ${esc(p.sexo? (p.sexo[0].toUpperCase()==="F"?"Feminino":"Masculino") : (p._sexo==="F"?"Feminino (inferred)":"Masculino (inferred)"))}</div>`;
+  if(p.alias) h+=`<div><span class="k">Alias:</span> ${esc(p.alias)}</div>`;
+  if(p.natural) h+=`<div><span class="k">Natural:</span> ${esc(p.natural)}</div>`;
+  if(p.residencia) h+=`<div><span class="k">Residência:</span> ${esc(p.residencia)}</div>`;
+  if(p.profession) h+=`<div><span class="k">Profession:</span> ${esc(p.profession)}</div>`;
+  if(p.burial) h+=`<div><span class="k">Burial:</span> ${esc(p.burial)}</div>`;
+  if(p.notes) h+=`<div><span class="k">Notas:</span> ${esc(p.notes)}</div>`;
+  if(p.notes) h+=`<div><span class="k">Observações:</span> ${esc(p.notes)}</div>`;
+  const rel=MODEL.relations.filter(r=>r.deId===p.id||r.paraId===p.id);
+  if(rel.length){ h+=`<h3>Relações</h3><ul>`+rel.map(r=>{
+    let other, dir;
+    if(r.deId===p.id){ other=r.to; dir=r.relation; }
+    else { other=r.from; dir=r.relation; }
+    const meta=[r.status||"",r.location?`em ${r.location}`:"",r.date?`data ${r.date}`:"",r.value?`valor ${r.value}`:"",r.property||"",r.notes||""].filter(Boolean).join("; ");
+    return `<li>${esc(dir)} <b>${esc(other)}</b> <span class="k">[${esc(r.source)}]${meta?" - "+esc(meta):""}</span></li>`; }).join("")+`</ul>`; }
+  if(p._props?.length){ h+=`<h3>Propriedades (purchase/sale) (${p._props.length})</h3><ul>`+p._props.map(pr=>
+    `<li><b>${esc(pr.role)}</b> - ${esc((pr.description||pr.title||"").slice(0,80))} <span class="k">${esc(pr.location||"")}${pr.article?" · art. "+pr.article:""}</span><br/><span class="k">🛍️ ${esc(pr.seller||"?")}</span><br/><span class="k">🛒 ${esc(pr.buyer||"?")}</span><br/><span class="k">Data: ${esc(pr.date||"")} · Value: ${esc(pr.value_tx||pr.value||"")} · Doc: ${esc(pr.document||"")}</span></li>`).join("")+`</ul>`; }
+  if(p._docs?.length){ h+=`<h3>Documentos onde aparece (${p._docs.length})</h3>`+p._docs.map(did=>docDetails(dById[did])).join(""); }
+  const vendidas=p._props?.filter(pr=>pr.role==="vendeu")||[];
+  h+=`<h3>Navigation</h3><div>`;
+  if(vendidas.length) h+=`<button class="btn" data-drill-prop="${esc(id)}">Propriedades Vendidas (${vendidas.length}) ↴</button> `;
+  h+=`<button class="btn">Ver ligações ↴</button></div>`;
+  openPanel(h,id);
+  const drillProp=panel.querySelector("[data-drill-prop]");
+  if(drillProp) drillProp.onclick=()=>{
+    const propIds=p._props.filter(pr=>pr.role==="vendeu").map(pr=>pr.id);
+    setView("prop"); setTimeout(()=>{
+      focusId=null; const posAll=[];
+      propIds.forEach(pid=>{ if(posProp[pid]) posAll.push(...posAll, ...neighbors(pid)); });
+      if(posAll.length) zoomTo(posProp,posAll); else worldFit(curW,curH);
+      closePanel();
+    },100);
+  };
+  // listeners para botões "Ir para documento"
+  panel.querySelectorAll("[data-gotoDoc]").forEach(btn=>{
+    btn.onclick=()=>{
+      const docId=btn.getAttribute("data-gotoDoc");
+      setView("doc");
+      setTimeout(()=>{
+        focusId=docId;
+        applyFocus();
+        zoomTo(posDoc,[docId]);
+        showDoc(docId);
+      },50);
+    };
+  });
+}
+function showProp(id){
+  const pr=MODEL.properties.find(x=>x.id===id); if(!pr){return;}
+  let h=`<h2>${esc((pr.description||"propriedade").slice(0,80))}</h2><div class="role">${esc(pr.type||"")} · ${esc(pr.document)}</div>`;
+  h+=row("Documento",`${pr.document}${pr.title?" - "+pr.title:""}`)+row("Tipo documento",pr.type)+row("Data documento",pr.date);
+  h+=row("Location",pr.location)+row("Parish",pr.parish)+row("Article",pr.article)+row("Nature",pr.property_nature)+row("Area",pr.area)+row("Quota",pr.quota)+row("Value",pr.value);
+  if(pr.buyer || pr.seller){
+    h+=`<div style="background:#f3f4f6;border-left:4px solid #dc2626;padding:8px;margin:8px 0;border-radius:2px">`;
+    if(pr.seller) h+=`<div><b style="color:#dc2626">🛍️ Seller:</b> ${esc(pr.seller)}</div>`;
+    if(pr.buyer) h+=`<div style="margin-top:4px"><b style="color:#16a34a">🛒 Buyer:</b> ${esc(pr.buyer)}</div>`;
+    h+=`</div>`;
+  }
+  h+=row("Transaction Nature",pr.nature);
+  if(pr.confrontacoes){ const c=pr.confrontacoes; const cc=["norte","sul","este","oeste"].map(k=>c[k]?`${k[0].toUpperCase()}: ${c[k]}`:"").filter(Boolean).join(" · ");
+    if(cc) h+=`<h3>Confrontações</h3><div>${esc(cc)}</div>`; }
+  const m=(pr.article||"").match(/^\s*(\d{1,5})\s*$/);
+  if(m){ const cl=MODEL.sameArticle.find(([a])=>a===m[1]);
+    if(cl){ const chain=cl[1].slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
+      h+=`<h3>Transmissions (art. ${esc(m[1])})</h3><ul>`+chain.map(x=>{ const parties=[clean(x.seller),clean(x.buyer)].filter(Boolean).join(" → ");
+        return `<li>${esc(x.date||"no date")} - <b>${esc(x.doc)}</b>${parties?` <span class="k">${esc(parties)}</span>`:""}${x.value?` · ${esc(x.value)}`:""}</li>`; }).join("")+`</ul>`; } }
+  const pdoc=MODEL.docById[pr.document]; if(pdoc){ h+=`<h3>Documentos onde aparece</h3>`+docDetails(pdoc); }
+  else if(pr._fonte){ h+=`<h3>Fonte</h3><div class="k">${esc(pr._fonte)} - ${srcLinks(pr._fonte)}</div>`; }
+  h+=`<button class="btn">Ver ligações ↴</button>`;
+  openPanel(h,id);
+}
+function drill(id){ focusId=id; applyFocus(); const pos=view==="gen"?posGen:view==="doc"?posDoc:posProp; zoomTo(pos,[...neighbors(id)]); }
+
+// Extrai transcricao_integral completa de um documento
+function docFullTranscription(d){
+  return d?.transcricao_integral || "";
+}
+function involvedPeople(d){
+  const out=new Map();
+  const put=(nm,role)=>{ const c=clean(nm); if(!c)return;
+    const person=MODEL.people.find(p=>[p.name,...(p.variants||[]).map(v=>typeof v === 'string' ? v : v.name || v)].map(clean).map(norm).some(k=>k===norm(c)));
+    const id=person?person.id:"X:"+norm(c), name=person?person.name:c;
+    const cur=out.get(id); if(!cur || (cur.role==="aparece" && role!=="aparece")) out.set(id,{name,role}); };
+  if(d.transaction){ put(d.transaction.buyer,"purchase"); put(d.transaction.seller,"sale"); }
+  MODEL.people.forEach(p=>{ if((p._docs||[]).includes(d.id)) put(p.name,"aparece"); });
+  return out;
+}
+function layoutDoc(){
+  const rowH=NODE_H+16, PADX=40, PADY=50, COLW=NODE_W, GAP=120;
+  const colPer=PADX, colDoc=colPer+COLW+GAP, colPr=colDoc+COLW+GAP;
+  const docsSorted=MODEL.docs.slice().sort((a,b)=>a.id.localeCompare(b.id));
+  const docY={}; let curY=PADY;
+  docsSorted.forEach(d=>{ const prs=MODEL.properties.filter(x=>x.doc===d.id); const ppl=involvedPeople(d);
+    const band=Math.max(1,prs.length,ppl.size); docY[d.id]=curY+(band-1)*rowH/2;
+    prs.forEach((pr,i)=>{ if(!posDoc[pr.id]) posDoc[pr.id]={x:colPr,y:curY+i*rowH}; });
+    curY+=band*rowH+18; });
+  const allPeople=new Map();
+  docsSorted.forEach(d=>involvedPeople(d).forEach((v,pid)=>{ if(!allPeople.has(pid)) allPeople.set(pid,v.name); }));
+  const pY={}; allPeople.forEach((nm,pid)=>{ const ys=docsSorted.filter(d=>involvedPeople(d).has(pid)).map(d=>docY[d.id]); pY[pid]=ys.length?ys.reduce((a,b)=>a+b,0)/ys.length:PADY; });
+  [...allPeople.keys()].sort((a,b)=>pY[a]-pY[b]).reduce((py,pid)=>{ const y=Math.max(pY[pid],py); if(!posDoc[pid]) posDoc[pid]={x:colPer,y}; return posDoc[pid].y+rowH; },PADY);
+  docsSorted.forEach(d=>{ if(!posDoc["DL:"+d.id]) posDoc["DL:"+d.id]={x:colDoc,y:docY[d.id]}; });
+  const ys=[curY,...[...allPeople.keys()].map(pid=>posDoc[pid].y+rowH)];
+  return {W:colPr+COLW+PADX,H:Math.max(...ys)+PADY,docsSorted,allPeople};
+}
+function renderDoc(){
+  const {W,H,docsSorted,allPeople}=layoutDoc(); svg._H=H;
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.innerHTML="";
+  const gE=el("g"),gHit=el("g"),gN=el("g"); svg.appendChild(gE); svg.appendChild(gHit); svg.appendChild(gN);
+  const edges=[];
+  const C=id=>{const p=posDoc[id]; return p?{x:p.x+NODE_W/2,y:p.y+NODE_H/2}:null;};
+  const link=(A,B,color,dash,a,b,cat,doc,rel)=>{ if(!A||!B||hidden.has(cat))return; const mx=(A.x+B.x)/2;
+    mkEdge(gE,gHit,edges,`M ${A.x} ${A.y} C ${mx} ${A.y}, ${mx} ${B.y}, ${B.x} ${B.y}`,color,dash,{a,b,cat,doc:doc||"",rel:rel||""},false); };
+  docsSorted.forEach(d=>{ const dc=C("DL:"+d.id);
+    MODEL.properties.filter(x=>x.doc===d.id).forEach(pr=>link(dc,C(pr.id),"#94a3b8","0","DL:"+d.id,pr.id,"propriedade",d.id,"propriedade"));
+    involvedPeople(d).forEach((v,pid)=>{ const col=CONFIG.filters.doc_role_colors[v.role]||"#3b82f6";
+      link(C(pid),dc,col,v.role==="aparece"?"4 4":"0",pid,"DL:"+d.id,v.role,d.id,v.role); }); });
+  MODEL.properties.forEach(pr=>{ const p=posDoc[pr.id]; if(!p)return; const g=el("g",{class:"node",transform:`translate(${p.x},${p.y})`}); g.dataset.id=pr.id;
+    g.appendChild(el("rect",{width:NODE_W,height:NODE_H,rx:8,fill:"#fef9c3"}));
+    const nm=el("text",{class:"nm",x:10,y:18}); nm.textContent=(pr.description||"").slice(0,30); g.appendChild(nm);
+    const pp=el("text",{class:"pp",x:10,y:34}); pp.textContent=(pr.location||"").slice(0,36); g.appendChild(pp);
+    const su=el("text",{class:"su",x:10,y:49}); su.textContent=[pr.article?"art. "+pr.article:"",pr.value||""].filter(Boolean).join(" · ").slice(0,40); g.appendChild(su);
+    gN.appendChild(g); });
+  allPeople.forEach((name,pid)=>{ const p=posDoc[pid]; if(!p)return; const g=el("g",{class:"node",transform:`translate(${p.x},${p.y})`}); g.dataset.id=pid;
+    g.appendChild(el("ellipse",{cx:NODE_W/2,cy:NODE_H/2,rx:NODE_W/2,ry:NODE_H/2-6,fill:"#dbeafe"}));
+    const t=el("text",{class:"nm",x:NODE_W/2,y:NODE_H/2+4,"text-anchor":"middle"}); t.textContent=name.slice(0,26); g.appendChild(t); gN.appendChild(g); });
+  docsSorted.forEach(d=>{ const p=posDoc["DL:"+d.id]; if(!p)return; const g=el("g",{class:"node",transform:`translate(${p.x},${p.y})`}); g.dataset.id="DL:"+d.id;
+    g.appendChild(el("rect",{width:NODE_W,height:NODE_H,rx:8,fill:"#e0e7ff"}));
+    const nm=el("text",{class:"nm",x:NODE_W/2,y:18,"text-anchor":"middle"}); nm.textContent=(d.id+" - "+(d.document_type||"")).slice(0,30); g.appendChild(nm);
+    const pp=el("text",{class:"pp",x:NODE_W/2,y:34,"text-anchor":"middle"}); pp.textContent=(d.title||"").slice(0,40); g.appendChild(pp);
+    const su=el("text",{class:"su",x:NODE_W/2,y:49,"text-anchor":"middle"}); su.textContent=(d.document_date||[]).join("; ").slice(0,38); g.appendChild(su);
+    gN.appendChild(g); });
+  bindView(gN,posDoc,false,edges); applyFocus(); worldFit(W,H);
+}
+// ── menu único consolidado para documentos ──
+function docMenuHandler(action, docId, btn){
+  const d=MODEL.docById[docId.slice(3)];
+  if(!d) return;
+
+  switch(action){
+    case 'explore': // explorar ligações
+      if((d.properties||[]).length){
+        setView("prop");
+        focusId=docId;
+        applyFocus();
+        zoomTo(posDoc,[...neighbors(docId)]);
+      }
+      break;
+    case 'viewProps': // ir para properties
+      setView("prop");
+      focusId=docId;
+      applyFocus();
+      zoomTo(posDoc,[...neighbors(docId)]);
+      break;
+    case 'copyAll': // copiar dados completos do documento
+      const txt=`${d.id}\n${d.title}\n${d.document_type}\nData: ${(d.document_date||[]).join("; ")}\n${(d.properties||[]).map(p=>p.description).join("\n")}`;
+      navigator.clipboard.writeText(txt).then(()=>{
+        if(btn){
+          const orig=btn.textContent;
+          btn.textContent=CONFIG.ui_strings.status.copied;
+          setTimeout(()=>btn.textContent=orig, 1500);
+        }
+      });
+      break;
+    case 'focusPerson': // foco numa pessoa (seller/buyer)
+      const person=event.currentTarget.dataset.person;
+      if(person) selectNode(person);
+      break;
+  }
+}
+
+function showDoc(id){
+  const d=MODEL.docById[id.slice(3)]; if(!d)return;
+  let h=`<h2>${esc(d.id)} - ${esc((d.title||"").slice(0,80))}</h2><div class="role">${esc(d.document_type||"")}</div>`;
+  h+=row("Data",(d.document_date||[]).join("; "))+row("Location",(d.location||[]).join("; "))+row("Imagens",String(d.n_images||(d.sources||[]).length));
+  if(d.transaction){ const t=d.transaction;
+    h+=`<h3>Transação</h3>`+row("Nature",t.nature)+row("Value",t.value);
+    h+=`<div style="background:#f3f4f6;border-left:4px solid #dc2626;padding:8px;margin:8px 0;border-radius:2px">`;
+    if(t.seller) h+=`<div><b style="color:#dc2626">🛍️ Seller:</b> <span class="docMenuLink" data-person="${nameToId[norm(t.seller)]||'P:'+norm(t.seller)}" title="clique para ir">${esc(t.seller)}</span></div>`;
+    if(t.buyer) h+=`<div style="margin-top:4px"><b style="color:#16a34a">🛒 Buyer:</b> <span class="docMenuLink" data-person="${nameToId[norm(t.buyer)]||'P:'+norm(t.buyer)}" title="clique para ir">${esc(t.buyer)}</span></div>`;
+    h+=`</div>`;
+  }
+  if((d.properties||[]).length){ h+=`<h3>Propriedades (${d.properties.length})</h3><ul>`+d.properties.map(pr=>`<li>${esc((pr.description||"").slice(0,50))} <span class="k">${esc(pr.location||"")}</span></li>`).join("")+`</ul>`; }
+  const ppl=involvedPeople(d);
+  if(ppl.size){ h+=`<h3>Pessoas envolvidas</h3><ul>`+[...ppl.entries()].map(([pid,v])=>`<li><span class="docMenuLink" data-person="${pid}" title="clique para ir">${esc(v.name)}</span> <span class="k">[${esc(v.role)}]</span></li>`).join("")+`</ul>`; }
+  h+=row("Notário/Tabelião",d.notario)+row("Tribunal/Cartório",d.tribunal)+row("Processo no",d.numero_processo)+row("Value total",d.valor_total);
+  const ents=(d.entities?.names||[]); if(ents.length){ h+=`<h3>Entidades (${ents.length})</h3><div class="k">${esc(ents.slice(0,40).join(" · "))}</div>`; }
+  h+=`<h3>Documentos onde aparece</h3>`+docDetails(d);
+  h+=`<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">`;
+  h+=`<button class="btn" onclick="docMenuHandler('explore','${esc(id)}',this)">Ver ligações ↴</button>`;
+  h+=`</div>`;
+  openPanel(h,id);
+  // event delegation para links de pessoa no menu
+  panel.querySelectorAll(".docMenuLink").forEach(link=>{
+    link.style.cursor="pointer";
+    link.style.color="#2563eb";
+    link.style.textDecoration="underline";
+    link.onclick=()=>{
+      const person=link.dataset.person;
+      if(person) selectNode(person);
+    };
+  });
+  // listeners para h4 colapsáveis (transcrição, OCR, files)
+  panel.querySelectorAll("h4[style*='cursor:pointer']").forEach(h4=>{
+    h4.onclick=(e)=>{
+      e.preventDefault();
+      const next=h4.nextElementSibling;
+      if(next && (next.hasAttribute("data-transcr") || next.hasAttribute("data-obs") || next.hasAttribute("data-files"))){
+        const isHidden=next.style.display==="none";
+        next.style.display=isHidden?"block":"none";
+        const marker=h4.querySelector("[data-expand]");
+        if(marker) marker.textContent=isHidden?"▼":"▶";
+      }
+    };
+    // botão copiar
+    const copyBtn=h4.nextElementSibling?.querySelector("[data-copy]");
+    if(copyBtn){
+      copyBtn.onclick=(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        const content=h4.nextElementSibling.dataset.content;
+        navigator.clipboard.writeText(content).then(()=>{
+          const orig=copyBtn.textContent;
+          copyBtn.textContent="✓ Copiado!";
+          setTimeout(()=>{ copyBtn.textContent=orig; },2000);
+        });
+      };
+    }
+    // botão expandir fullscreen
+    const expandBtn=h4.nextElementSibling?.querySelector("[data-fullscreen]");
+    if(expandBtn){
+      expandBtn.onclick=(e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        const content=h4.nextElementSibling.dataset.content;
+        const modal=document.createElement("div");
+        modal.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px";
+        modal.innerHTML=`<div style="background:white;border-radius:8px;padding:20px;max-width:90%;max-height:90%;overflow:auto;position:relative;box-shadow:0 4px 20px rgba(0,0,0,0.3)"><button style="position:absolute;top:10px;right:10px;padding:5px 10px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;cursor:pointer" onclick="this.closest('div').parentElement.remove()">Fechar ✕</button><h3 style="margin-top:0">${esc(h4.textContent.trim())}</h3><pre style="white-space:pre-wrap;font-family:monospace;font-size:0.85em;overflow:auto">${esc(content)}</pre></div>`;
+        modal.onclick=(ev)=>{ if(ev.target===modal) modal.remove(); };
+        document.body.appendChild(modal);
+      };
+    }
+  });
+}
+function showRelation(p){
+  const a=p.dataset.a,b=p.dataset.b,cat=p.dataset.cat||"other",rel=p.dataset.rel||"",source=p.dataset.source||"",doc=p.dataset.doc||"",conf=p.dataset.conf||"";
+  const nm=id=>!id?"":id.startsWith("PR:")?(MODEL.properties.find(x=>x.id===id)?.description||id):id.startsWith("DL:")?id.slice(3):(MODEL.pById[id]?.name||id.slice(2));
+  let h=`<h2>Relation</h2><div class="role">${esc(CAT_LABEL[cat]||cat)}${source?` · [${esc(source)}]`:""}`;
+  if(conf) h += ` <span style="font-weight:600;color:#7c3aed">🎯 ${esc(conf)}</span>`;
+  h += `</div>`;
+  h+=`<div><b>${esc(nm(a))}</b> - ${esc(rel||CAT_LABEL[cat]||cat)} → <b>${esc(nm(b))}</b></div>`;
+  const full=MODEL.relations.find(r=>r.cat===cat&&((r.deId===a&&r.paraId===b)||(r.deId===b&&r.paraId===a)));
+  if(full){
+    const meta=[full.status?`Estado: ${full.status}`:"",full.location?`Local: ${full.location}`:"",full.date?`Data: ${full.date}`:"",full.value?`Valor: ${full.value}`:"",full.property?`Propriedade: ${full.property}`:"",full.notes?`Notas: ${full.notes}`:""].filter(Boolean);
+    if(meta.length) h+=`<div class="k" style="margin-top:6px">${esc(meta.join(" · "))}</div>`;
+    // Inference details (v2.0)
+    if(full.inferedbyai || full.inference_type) {
+      const inferenceInfo = [];
+      if(full.inference_type) inferenceInfo.push(`Tipo: ${full.inference_type}`);
+      if(full.inference_confidence) inferenceInfo.push(`Confiança: ${full.inference_confidence}`);
+      if(full.inference_reasoning) inferenceInfo.push(`Motivo: ${full.inference_reasoning}`);
+      if(inferenceInfo.length) h += `<div style="margin-top:8px;padding:6px;background:#f9fafb;border-left:3px solid #7c3aed;font-size:11px;color:#475569"><b>🧐 Inferência</b><br>${esc(inferenceInfo.join(" · "))}</div>`;
+    }
+  }
+  const docSet=new Map();
+  if(doc&&MODEL.docById[doc]) docSet.set(doc,MODEL.docById[doc]);
+  (full?.source_images||[]).forEach(img=>{ const did=MODEL.imgToDoc?.[img]; if(did&&MODEL.docById[did]) docSet.set(did,MODEL.docById[did]); });
+  if(docSet.size){ h+=`<h3>Documentos onde aparece (${docSet.size})</h3>`+[...docSet.values()].map(docDetails).join(""); }
+  h+=`<h3>Navigation</h3><div>`;
+  if(a) h+=`<button class="btn" data-see="${esc(a)}">ver ${esc((nm(a)||"").slice(0,22))}</button> `;
+  if(b) h+=`<button class="btn" data-see="${esc(b)}">ver ${esc((nm(b)||"").slice(0,22))}</button> `;
+  if(doc&&MODEL.docById[doc]) h+=`<button class="btn" data-openview="DL:${esc(doc)}">Open in vista Documentos ↴</button>`;
+  h+=`</div>`;
+  openPanel(h);
+  panel.querySelectorAll("[data-see]").forEach(bt=>bt.onclick=()=>selectNode(bt.dataset.see));
+  // menu handler para explorar documentos
+  const ov=panel.querySelectorAll("[data-openview]");
+  ov.forEach(btn=>btn.onclick=()=>{const fid=btn.dataset.openview; setView("doc"); focusId=fid; applyFocus(); zoomTo(posDoc,[...neighbors(fid)]);});
+
+}
+
+// ---------- barra / filtros ----------
+function buildFilters(){
+  const f=document.getElementById("filters"); f.innerHTML="";
+  if(view==="doc"){
+    const doc_filters = CONFIG.filters.doc_view;
+    Object.entries(doc_filters).forEach(([c, cfg]) => {
+      const lab=document.createElement("label");
+      lab.innerHTML=`<input type="checkbox" data-cat="${c}" ${hidden.has(c)?"":"checked"}/><span class="sw" style="background:${cfg.color}"></span>${cfg.label}`;
+      lab.querySelector("input").addEventListener("change",e=>{ e.target.checked?hidden.delete(c):hidden.add(c); rerender(); });
+      f.appendChild(lab);
+    });
+    return;
+  }
+  const cats = view==="gen"
+    ? (()=>{ const all = [...new Set(MODEL.relations.map(r=>r.cat))];
+             const others = all.filter(c=>!['sale','inheritance','mortgage'].includes(c));
+             const transactional = all.filter(c=>['sale','inheritance','mortgage'].includes(c));
+             return [...others, ...transactional]; })()  // transacionais no fim
+    : ["sale"];
+  cats.forEach(c=>{ const lab=document.createElement("label");
+    lab.innerHTML=`<input type="checkbox" data-cat="${c}" ${hidden.has(c)?"":"checked"}/><span class="sw" style="background:${CAT_COLOR[c]||"#999"}"></span>${CAT_LABEL[c]||c}`;
+    lab.querySelector("input").addEventListener("change",e=>{ e.target.checked?hidden.delete(c):hidden.add(c); rerender(); });
+    f.appendChild(lab); });
+  if(view==="prop"){ const lab=document.createElement("label");
+    lab.innerHTML=`<input type="checkbox" id="onlyProps"/> só properties (liga mesma-propriedade)`;
+    lab.querySelector("input").addEventListener("change",rerender); f.appendChild(lab); }
+}
+function rerender(){ view==="gen"?renderGen():view==="doc"?renderDoc():renderProp(); }
+
+function setView(v){ view=v; focusId=null; closePanel();
+  document.getElementById("vGen").classList.toggle("on",v==="gen");
+  document.getElementById("vProp").classList.toggle("on",v==="prop");
+  document.getElementById("vDoc").classList.toggle("on",v==="doc");
+  document.getElementById("barHint").textContent = v==="gen"
+    ? CONFIG.hints.genealogy
+    : v==="prop"
+    ? CONFIG.hints.properties
+    : CONFIG.hints.documents;
+  hidden.clear();
+  if(v==="gen") { CONFIG.filters.genealogy_default_hidden.forEach(cat => hidden.add(cat)); }
+  buildFilters(); rerender();
+}
+
+document.getElementById("vGen").onclick=()=>setView("gen");
+document.getElementById("vProp").onclick=()=>setView("prop");
+document.getElementById("vDoc").onclick=()=>setView("doc");
+document.getElementById("fit").onclick=refit;
+document.getElementById("clearFocus").onclick=()=>{ focusId=null; applyFocus(); refit(); };
+window.addEventListener("resize",refit);
+
+// ---------- init ----------
+(async () => {
+  try {
+    await loadConfig();
+    const data = await load();
+    reloadData(data);
+    setupSourceModal();
+  } catch(e) {
+    document.getElementById("sub").textContent="erro: "+e.message;
+    document.getElementById("empty").style.display="block";
+    document.getElementById("empty").innerHTML=`<b>Não consegui carregar dados.</b><br><br>Projeto: <code>${PROJECT_NAME}</code><br>Verifique que <code>schema.json</code> e <code>docs_logical.json</code> estão acessíveis.<br><br>Em alternativa (serviço estático): <code>cd NotaryMindAi && python3 -m http.server 8000</code> e abre <code>http://localhost:8000/ui/main.html?project=${PROJECT_NAME}</code>`;
+    setupSourceModal();
+  }
+})();;
+
+
+
+// Tooltip: hover + click toggle
+setTimeout(() => {
+  const archEl = document.getElementById("archiveName");
+  if(!archEl) return;
+
+  // Teste: adicionar conteúdo default ao tooltip
+  const tooltip = archEl.querySelector(".tooltip");
+  if(tooltip && !tooltip.textContent) {
+    tooltip.textContent = "📄 0 documents · 📄 0 images\n📅 carregando...\n🤖 -\n📝 -";
+  }
+
+  archEl.addEventListener("mousemove", (e) => {
+    const tooltip = archEl.querySelector(".tooltip");
+    if(!tooltip) return;
+    tooltip.style.left = (e.clientX + 10) + "px";
+    tooltip.style.top = (e.clientY + 10) + "px";
+  });
+
+  archEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    archEl.classList.toggle("active");
+  });
+
+  document.addEventListener("click", () => {
+    archEl.classList.remove("active");
+  });
+}, 100);
+
+// Event listeners para modal de fonte (safe: verifica existência)
+const setupSourceModal = () => {
+  const modal = document.getElementById("sourceModal");
+  const btnCloseSource = document.getElementById("btnCloseSource");
+  const btnLoadUrl = document.getElementById("btnLoadUrl");
+  const btnLoadFile = document.getElementById("btnLoadFile");
+  const urlInput = document.getElementById("urlInput");
+  const fileInput = document.getElementById("fileInput");
+  const currentSource = document.getElementById("currentSource");
+
+  if(!modal) return; // skip se modal não existe
+
+  // Header settings button opens the modal
+  const headerSettings = document.getElementById("headerSettings");
+  if(headerSettings) {
+    headerSettings.onclick = () => {
+      modal.style.display = "flex";
+      modal.style.alignItems = "center";
+      modal.style.justifyContent = "center";
+      modal.style.flexDirection = "column";
+      currentSource.textContent = CURRENT_SOURCE;
+    };
+  }
+
+  btnCloseSource.onclick = () => {
+    modal.style.display = "none";
+  };
+
+  btnLoadUrl.onclick = async () => {
+    if(!urlInput.value.trim()) { alert("Introduz uma URL válida"); return; }
+    const data = await loadFromUrl(urlInput.value.trim());
+    if(data) await reloadData(data);
+  };
+
+  btnLoadFile.onclick = async () => {
+    if(!fileInput.files[0]) { alert("Seleciona um ficheiro"); return; }
+    const data = await loadFromFile(fileInput.files[0]);
+    if(data) await reloadData(data);
+  };
+
+  modal.onclick = (e) => {
+    if(e.target === modal) modal.style.display = "none";
+  };
+};
+
+// Chamar após DOM estar pronto
+</script>
+
+</html>
