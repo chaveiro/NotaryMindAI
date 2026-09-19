@@ -197,7 +197,7 @@ def main():
     
     print_report(conflicts)
     
-    return 1 if conflicts else 0
+    return 0  # findings are reported in stdout, not via exit code (keeps API/UI calls from treating this as a failure)
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -109,7 +109,7 @@ Schema read by the build (do not change without aligning the build):
 ```json
 {
   "schema_version": "2.0",
-  "documents": [
+  "logical_documents": [
     { "id": "DL01", "title": "...", "type": "...",
       "images": ["<name>.jpg", "<name>.pdf", ...] }
   ]

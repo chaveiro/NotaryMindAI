@@ -1,9 +1,9 @@
 # 📚 NotaryMindAI — OCR GenAI + Paleographic Transcription of Historical Documents
 
 **Project:** Multi-archive genealogical & notarial data extraction  
-**Architecture:** Project-centric (data) + Agnostic tools (build/UI/validation)  
+   "logical_documents": []
 **Reusable:** Yes — generic for notarial archives, genealogy, administrative records, museums  
-**Status:** ✅ Production-ready with multi-project support  
+**Status:** Active development with multi-project support
 **Language:** 🇬🇧 English (all code, documentation, and UI)
 
 ---
@@ -471,13 +471,21 @@ All prompts include `GLOSSARIO.md` as context.
 |------|---------|
 | **README.md** | Project overview |
 | **SKILL.md** | Processing workflows and modes |
+| **skills/transcript/GLOSSARY-TEMPLATE.md** | Source template for each new project's build/OCR-compatible glossary |
+| **skills/transcript/GENDER-RULES-TEMPLATE.json** | Source template for gender inference keywords (Portuguese + English) |
 | **skills/transcript/SCHEMA.md** | Immutable data contract |
 | **projects/<project>/GLOSSARIO.md** | Normalization rules (edit freely) |
+| **projects/<project>/gender_rules.json** | Project-specific gender inference keywords |
 | **ui/SKILL.md** | Viewer features |
+| **api/README.md** | Current REST endpoints and runtime configuration |
 
 ---
 
 ## 🔄 Typical Session Workflow
+
+The UI exposes the same workflow through Settings: Project (load/new/external/delete),
+Import Files, Build Metadata (A1/A2/B/C plus glossary editor), and Project Chat. All
+project-aware controls default to the project currently loaded in the viewer.
 
 1. **Preparation**
    ```bash

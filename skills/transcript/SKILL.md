@@ -54,6 +54,20 @@ python3 ../../skills/transcript/validate_map.py projects/cotimos
 - **Corrections** — `**Canonical** — NOT "Wrong"` (applied in-memory during build)
 - **Local Knowledge** — JSON block with `identities`, `persons`, `relations` (source:"glossary")
 
+**New-project template:** `skills/transcript/GLOSSARY-TEMPLATE.md` is the source copied and
+personalized as `projects/<name>/GLOSSARIO.md` when the API/UI creates a project. It is
+modeled on the Cótimos project, with verified reading corrections, structured local
+genealogy, and project notes. Real Cótimos examples are commented/inert for the build
+but remain readable context for editors and OCR GenAI. The first valid `json` block
+contains empty `identities`, `persons`, and `relations` arrays until project facts are
+known.
+
+The generated project `GLOSSARIO.md`, not the root template, is consumed directly by
+`build_docs_logical.py` and supplied as context to A1/A2/C GenAI runs.
+
+The builder reads the first valid fenced `json` object containing one of those three
+keys. Keep all structured local knowledge in that single block.
+
 **Workflow:**
 1. Edit `GLOSSARIO.md`
 2. Regenerate: `python3 ../../skills/transcript/build_docs_logical.py projects/cotimos`
@@ -65,6 +79,10 @@ python3 ../../skills/transcript/validate_map.py projects/cotimos
 
 **When:** Need to group images → documents or fix transaction data  
 **File:** `projects/cotimos/docs_logical_map.json`
+
+The only top-level document collection is `logical_documents`, as specified in
+`SCHEMA.md`. Do not use `documents` in the map; that key belongs to generated
+`docs_logical.json` output only.
 
 **Workflow:**
 1. GenAI reads `full_transcript` from metadata → deduces:

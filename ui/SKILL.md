@@ -40,6 +40,36 @@ Self-contained interactive web application that visualizes genealogical and prop
 - **Hover edge** to see relation label
 - **Hide categories** with checkboxes at top
 
+### Settings and Project Workflow
+
+The Settings modal has four outer tabs. On mobile, labels collapse to accessible icons.
+
+| Tab | Implemented behavior |
+| --- | --- |
+| Project | Subtabs for Load, New, and Load External (URL or JSON file); confirmed recursive delete |
+| Import Files | Upload supported images/PDFs and show project processing status above the drop zone |
+| Build Metadata | Run Modes A1/A2/B/C, edit glossary/map/consolidated/gender files in the reusable text editor, and display quality reports |
+
+The text editor shows the active filename at bottom-left. Save and expand are on the
+bottom-right, with the rightmost `×` button closing the editor. JSON project files are
+validated by the API before saving.
+| Project Chat | Read-only search against `docs_logical.json` |
+
+Project status uses one shared renderer across all tabs. It shows document, image,
+person, relation, and metadata counts. `pending metadata` means an imported source has
+no same-stem JSON file; `stale metadata` means the source file is newer than its JSON.
+Project Load, Import Files, and Build Metadata default to the project currently loaded
+in the viewer, even when it differs from the original URL parameter.
+
+The top header includes person, relation, and property counts. A ready project has no
+persistent badge; an incomplete project is amber and shows a warning icon with visible
+reasons. The Statistics popup always includes full readiness, image/metadata counts,
+map/glossary/consolidated-file presence, pending/stale filenames, timestamp, and model.
+
+All API calls use a JSON-aware fallback helper. It first tries an optional `api` query
+parameter, then same-origin `/api`, then local development ports 8787 and 8790. A host
+that returns `main.html` for an unknown API route is skipped rather than parsed as JSON.
+
 ---
 
 ## Architecture: How It Works
@@ -694,12 +724,12 @@ Source: "glossary"          → Short dash (dash="2 4")
 }
 ```
 
-### Example 2: Change "Genealogy" button to "Árvore Genealógica"
+### Example 2: Change "Genealogy" button to "Family Tree"
 ```json
 // schema.json
 "ui_strings": {
   "nav_buttons": {
-    "genealogy": "Árvore Genealógica"
+    "genealogy": "Family Tree"
   }
 }
 ```

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt"><head><meta charset="utf-8"/>
+<html lang="en"><head><meta charset="utf-8"/>
 <style>
   #archiveName{cursor:help;font-weight:500;border-bottom:1px dotted #64748b;position:relative}
   :root{--bg:#f1f5f9;--pan:#ffffff;--ink:#0f172a;--mut:#475569;--line:#cbd5e1}
@@ -48,18 +48,31 @@
   aside .srcbox{padding:4px 0 2px 10px}
   #tip{position:fixed;display:none;pointer-events:none;z-index:60;background:#0f172a;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;max-width:300px;box-shadow:0 2px 8px #0005;line-height:1.35}
   #archiveName{cursor:help;font-weight:500;border-bottom:1px dotted #64748b;position:relative}
+  .settingsTab{min-width:0;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:6px}
+  .settingsTabIcon{font-size:16px;line-height:1}
+  .projectSubtabs{display:flex;gap:4px;margin-bottom:15px;border-bottom:1px solid #475569}
+  .projectSubtab{flex:1;padding:8px 6px;background:transparent;color:#94a3b8;border:none;border-bottom:2px solid transparent;cursor:pointer;font-size:11px;font-weight:600}
+  .projectSubtab.active{color:#e2e8f0;border-bottom-color:#38bdf8}
+  .projectDetails{padding:10px;background:#0f172a;border-radius:4px;border:1px solid #334155;font-size:11px;color:#cbd5e1}
+  #stats{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+  #projectStatus{display:none;padding:2px 6px;border:1px solid currentColor;border-radius:4px;font-size:10px;font-weight:600}
+  @media(max-width:560px){
+    .settingsTab{padding:11px 8px!important}
+    .settingsTabLabel{display:none}
+    .settingsTabIcon{font-size:18px}
+  }
 </style></head>
 <body>
 <header>
   <div style="flex:1">
     <h1 style="margin:0 0 2px 0">NotaryMind AI</h1>
-    <p style="margin:0;font-size:13px;color:#94a3b8;font-weight:400">Explorador de Certidões, Relações e Propriedades</p>
+    <p style="margin:0;font-size:13px;color:#94a3b8;font-weight:400">Explorer for Certificates, Relations & Properties</p>
   </div>
   <div style="text-align:right;white-space:nowrap;display:flex;flex-direction:column;gap:2px">
-    <p id="stats" style="margin:0"></p>
+    <p id="stats" style="margin:0"><span id="statsCounts"></span><span id="projectStatus"></span></p>
     <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
-      <p id="sub" style="margin:0"><span id="archiveName" style="cursor:help;font-weight:500;border-bottom:1px dotted #64748b;cursor:pointer" title="clica para info"></span></p>
-      <button id="headerSettings" title="Configurações" style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px;color:#94a3b8;transition:color 0.2s" onmouseover="this.style.color='#cbd5e1'" onmouseout="this.style.color='#94a3b8'">⚙️</button>
+      <p id="sub" style="margin:0"><span id="archiveName" style="cursor:help;font-weight:500;border-bottom:1px dotted #64748b;cursor:pointer" title="Click for info"></span></p>
+      <button id="headerSettings" title="Settings" style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px;color:#94a3b8;transition:color 0.2s" onmouseover="this.style.color='#cbd5e1'" onmouseout="this.style.color='#94a3b8'">⚙️</button>
     </div>
   </div>
 </header>
@@ -74,40 +87,221 @@
   <div class="grp" id="filters"></div>
   <div class="sep"></div>
   <div class="grp">
-    <button id="fit" title="Ajustar Zoom">⛶</button>
-    <button id="clearFocus" style="display:none">Limpar foco</button>
+    <button id="fit" title="Fit to view">⛶</button>
+    <button id="clearFocus" style="display:none">Clear focus</button>
   </div>
   <span class="hint" id="barHint">Drag nodes · click for details/drilldown</span>
 </div>
 
 
-<div id="sourceModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:3000;align-items:center;justify-content:center;flex-direction:column">
-  <div style="background:#1e293b;color:#e2e8f0;padding:20px;border-radius:8px;min-width:400px;max-width:500px;box-shadow:0 4px 20px #0005">
-    <h2 style="margin-top:0">Fonte de Dados</h2>
-
-    <div style="margin:15px 0;font-size:12px;color:#94a3b8">
-      <b>Fonte atual:</b><br>
-      <code id="currentSource" style="display:block;margin-top:5px;padding:8px;background:#0f172a;border-radius:4px;word-break:break-all">documentos_logicos.json</code>
+<!-- Settings Modal with Tabs: Project, Import, Build Metadata, Chat -->
+<div id="sourceModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:3000;align-items:center;justify-content:center;flex-direction:column;overflow-y:auto;padding:20px 0">
+  <div style="background:#1e293b;color:#e2e8f0;border-radius:8px;width:90%;max-width:700px;box-shadow:0 4px 30px rgba(0,0,0,0.9);overflow:hidden">
+    <!-- Tab Headers -->
+    <div style="display:flex;border-bottom:1px solid #334155;background:#0f172a">
+      <button class="settingsTab" data-tab="projects" aria-label="Project" title="Project" style="flex:1;padding:12px;background:#0f172a;color:#94a3b8;border:none;border-bottom:2px solid #2563eb;cursor:pointer;font-weight:500;transition:all 0.2s">
+        <span class="settingsTabIcon">🗂️</span><span class="settingsTabLabel">Project</span>
+      </button>
+      <button class="settingsTab" data-tab="import" aria-label="Import files" title="Import Files" style="flex:1;padding:12px;background:#0f172a;color:#94a3b8;border:none;border-bottom:2px solid transparent;cursor:pointer;font-weight:500;transition:all 0.2s">
+        <span class="settingsTabIcon">📥</span><span class="settingsTabLabel">Import</span>
+      </button>
+      <button class="settingsTab" data-tab="current" aria-label="Build metadata" title="Build Metadata" style="flex:1;padding:12px;background:#0f172a;color:#94a3b8;border:none;border-bottom:2px solid transparent;cursor:pointer;font-weight:500;transition:all 0.2s">
+        <span class="settingsTabIcon">🛠️</span><span class="settingsTabLabel">Build</span>
+      </button>
+      <button class="settingsTab" data-tab="chat" aria-label="Chat about the selected project" title="Project Chat" style="flex:1;padding:12px;background:#0f172a;color:#94a3b8;border:none;border-bottom:2px solid transparent;cursor:pointer;font-weight:500;transition:all 0.2s">
+        <span class="settingsTabIcon">💬</span><span class="settingsTabLabel">Chat</span>
+      </button>
     </div>
 
-    <div style="margin:15px 0">
-      <label style="display:block;font-size:12px;margin-bottom:5px"><b>📥 Carregar de URL:</b></label>
-      <input id="urlInput" type="text" placeholder="ex: http://localhost:8000/documentos_logicos.json" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;box-sizing:border-box;font-size:12px">
-      <button id="btnLoadUrl" style="margin-top:8px;padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;width:100%"></button>
+    <div style="padding:20px;max-height:70vh;overflow-y:auto">
+      <!-- Tab 1: Projects Management -->
+      <div id="tab-projects" class="settingsTabContent" style="display:block">
+        <h3 style="margin-top:0;margin-bottom:12px">🗂️ Project</h3>
+
+        <div class="projectSubtabs" role="tablist" aria-label="Project actions">
+          <button class="projectSubtab active" data-project-subtab="load" role="tab" aria-selected="true">📂 Load</button>
+          <button class="projectSubtab" data-project-subtab="new" role="tab" aria-selected="false">➕ New</button>
+          <button class="projectSubtab" data-project-subtab="external" role="tab" aria-selected="false">🌐 Load External</button>
+        </div>
+
+        <div class="projectSubtabContent" data-project-panel="load">
+          <div style="margin-bottom:15px">
+            <label style="display:block;font-size:12px;margin-bottom:5px;color:#cbd5e1"><b>Load project:</b></label>
+            <div style="display:flex;gap:8px">
+              <select id="projectSelect" style="flex:1;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;font-size:12px;cursor:pointer">
+                <option value="">Loading projects...</option>
+              </select>
+              <button id="btnSwitchProject" style="padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap">Switch</button>
+            </div>
+          </div>
+
+          <div id="projectsListContainer" class="projectDetails" style="max-height:200px;overflow-y:auto">
+            Loading projects...
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:6px">
+            <button id="btnDeleteProject" title="Delete project" style="padding:4px 7px;background:transparent;color:#94a3b8;border:1px solid #475569;border-radius:4px;cursor:pointer;font-size:10px;opacity:0.75">🗑️ Delete</button>
+          </div>
+        </div>
+
+        <div class="projectSubtabContent" data-project-panel="new" style="display:none">
+          <h4 style="margin:0 0 10px 0;font-size:12px;color:#cbd5e1">New Project</h4>
+          <input id="newProjectName" type="text" placeholder="Project name (ex: my-archive)" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;box-sizing:border-box;font-size:12px;margin-bottom:8px">
+          <input id="newProjectDisplay" type="text" placeholder="Title (ex: My Archive)" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;box-sizing:border-box;font-size:12px;margin-bottom:8px">
+          <button id="btnCreateProject" style="width:100%;padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500">➕ Create Project</button>
+        </div>
+
+        <div class="projectSubtabContent" data-project-panel="external" style="display:none">
+          <h4 style="margin:0 0 10px 0;font-size:12px;color:#cbd5e1">Load External Data</h4>
+          <div style="font-size:11px;color:#94a3b8;margin-bottom:10px"><b>Current source:</b> <code id="currentSource" style="word-break:break-all;color:#cbd5e1;background:none;padding:0">docs_logical.json</code></div>
+          <label style="display:block;font-size:12px;margin-bottom:5px"><b>Load from URL:</b></label>
+          <input id="urlInput" type="text" placeholder="ex: http://localhost:8000/docs_logical.json" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;box-sizing:border-box;font-size:12px">
+          <button id="btnLoadUrl" style="margin-top:8px;padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;width:100%">Load URL</button>
+          <label style="display:block;font-size:12px;margin:12px 0 5px"><b>Load JSON file:</b></label>
+          <input id="fileInput" type="file" accept=".json" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;box-sizing:border-box;font-size:12px;cursor:pointer">
+          <button id="btnLoadFile" style="margin-top:8px;padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;width:100%">Load File</button>
+        </div>
+      </div>
+
+      <!-- Tab 2: Import Files -->
+      <div id="tab-import" class="settingsTabContent" style="display:none">
+        <h3 style="margin-top:0;margin-bottom:15px">📥 Import Contents</h3>
+
+        <div style="margin-bottom:15px">
+          <label style="display:block;font-size:12px;margin-bottom:5px;color:#cbd5e1"><b>Select project:</b></label>
+          <select id="importProjectSelect" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;font-size:12px;cursor:pointer">
+            <option value="">Loading projects...</option>
+          </select>
+        </div>
+
+        <div id="importProjectDetails" class="projectDetails" style="margin-bottom:15px">
+          Select a project to view its file status.
+        </div>
+
+        <div id="dropZone" style="border:2px dashed #475569;border-radius:8px;padding:30px;text-align:center;background:#0f172a;cursor:pointer;transition:all 0.2s;margin-bottom:15px" onmouseover="this.style.borderColor='#2563eb';this.style.background='#1e293b'" onmouseout="this.style.borderColor='#475569';this.style.background='#0f172a'">
+          <div style="font-size:24px;margin-bottom:10px">📁</div>
+          <div style="font-weight:500;color:#e2e8f0;margin-bottom:5px">Drag files or folders here</div>
+          <div style="font-size:11px;color:#94a3b8">Or click to select (.jpg, .png, .pdf)</div>
+        </div>
+
+        <input id="fileInputMultiple" type="file" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" style="display:none">
+
+        <div id="uploadProgressContainer" style="display:none;margin-bottom:15px">
+          <div id="uploadProgress" style="width:100%;height:20px;background:#0f172a;border-radius:4px;overflow:hidden;border:1px solid #475569">
+            <div id="uploadProgressBar" style="height:100%;width:0%;background:#2563eb;transition:width 0.3s"></div>
+          </div>
+          <div id="uploadStatus" style="font-size:11px;color:#94a3b8;margin-top:5px">Uploading...</div>
+        </div>
+
+        <button id="btnUploadFiles" style="width:100%;padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500">📥 Upload Files</button>
+      </div>
+
+      <!-- Tab 3: Current Project Processing -->
+      <div id="tab-current" class="settingsTabContent" style="display:none">
+        <h3 style="margin-top:0;margin-bottom:15px">🛠️ Build Metadata</h3>
+        <label style="display:block;font-size:12px;margin-bottom:5px;color:#cbd5e1"><b>Select project:</b></label>
+        <select id="currentProjectSelect" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;font-size:12px;cursor:pointer;margin-bottom:15px">
+          <option value="">Loading projects...</option>
+        </select>
+        <div id="currentProjectDetails" class="projectDetails" style="margin-bottom:15px"></div>
+        <h4 style="margin:15px 0 8px;font-size:11px;color:#94a3b8;text-transform:uppercase">Build Metadata with GenAI</h4>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button class="projectAction" data-mode="a1" style="flex:1;min-width:0;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">📷 OCR + Interpret</button>
+          <button class="projectAction" data-mode="a2" style="flex:1;min-width:0;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">🧠 Reinterpret only</button>
+          <button class="projectAction" data-mode="c" style="flex:1;min-width:0;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">🗺️ Generate Docs Map</button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="projectAction" data-mode="b" style="flex:1;min-width:0;padding:10px;background:#0f766e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">🏗️ Build</button>
+        </div>
+        <h4 style="margin:15px 0 8px;font-size:11px;color:#94a3b8;text-transform:uppercase">Review Project Files</h4>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <button class="projectFileAction" data-file="GLOSSARIO.md" data-title="Edit GLOSSARIO.md" style="flex:1;min-width:0;padding:9px 6px;background:#475569;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:10px">📝 Glossary</button>
+          <button class="projectFileAction" data-file="gender_rules.json" data-title="Edit gender_rules.json" style="flex:1;min-width:0;padding:9px 6px;background:#475569;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:10px">⚧ Gender Rules</button>
+          <button class="projectFileAction" data-file="docs_logical_map.json" data-title="Edit docs_logical_map.json" style="flex:1;min-width:0;padding:9px 6px;background:#475569;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:10px">🗺️ Docs Map (GenAi)</button>
+          <button class="projectFileAction" data-file="docs_logical.json" data-title="Edit docs_logical.json" style="flex:1;min-width:0;padding:9px 6px;background:#475569;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:10px">📚 Docs Data</button>
+
+        </div>
+        <h4 style="margin:15px 0 8px;font-size:11px;color:#94a3b8;text-transform:uppercase">Quality Reports</h4>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+          <button class="projectToolAction" data-tool="audit-inference" style="padding:9px 6px;background:#334155;color:#fff;border:1px solid #475569;border-radius:4px;cursor:pointer;font-size:10px">🔎 Audit Inference</button>
+          <button class="projectToolAction" data-tool="validate-map" style="padding:9px 6px;background:#334155;color:#fff;border:1px solid #475569;border-radius:4px;cursor:pointer;font-size:10px">✓ Validate Map</button>
+          <button class="projectToolAction" data-tool="validate-variants" style="padding:9px 6px;background:#334155;color:#fff;border:1px solid #475569;border-radius:4px;cursor:pointer;font-size:10px">⇄ Scan Person Names Conflicts</button>
+          <button class="projectAction" data-mode="validate-docs" style="padding:9px 6px;background:#334155;color:#fff;border:1px solid #475569;border-radius:4px;cursor:pointer;font-size:10px">✅ Validate Docs</button>
+        </div>
+        <div id="projectActionStatusWrap" style="display:none;margin:15px 0 0;background:#020617;border:1px solid #334155;border-radius:4px;overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#0f172a;border-bottom:1px solid #334155">
+            <span style="font-size:10px;color:#94a3b8;letter-spacing:.04em">Log</span>
+            <button id="btnMaximizeActionStatus" title="Maximize" style="padding:2px 8px;background:transparent;color:#94a3b8;border:none;border-radius:4px;cursor:pointer;font-size:13px;line-height:1">⛶</button>
+          </div>
+          <pre id="projectActionStatus" style="margin:0;padding:10px;background:transparent;border:none;color:#cbd5e1;font-size:10px;line-height:1.5;white-space:pre-wrap;max-height:180px;overflow:auto"></pre>
+        </div>
+      </div>
+
+      <!-- Tab 4: Agent Chat -->
+      <div id="tab-chat" class="settingsTabContent" style="display:none">
+        <h3 style="margin-top:0;margin-bottom:15px">💬 Project Chat</h3>
+
+        <div style="margin-bottom:15px">
+          <label style="display:block;font-size:12px;margin-bottom:5px;color:#cbd5e1"><b>Project:</b></label>
+          <select id="chatProjectSelect" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;font-size:12px;cursor:pointer">
+            <option value="">Loading projects...</option>
+          </select>
+        </div>
+
+        <div id="chatProjectDetails" class="projectDetails" style="margin-bottom:15px">
+          Select a project to view its status.
+        </div>
+
+        <div style="margin-bottom:15px;padding:10px;background:#0f172a;border-radius:4px;border:1px solid #334155;max-height:200px;overflow-y:auto;font-size:11px;color:#cbd5e1;line-height:1.6">
+          <b style="color:#2563eb">⏱️ Query-Only Mode</b>
+          <br>Agent is query-only: no write, create, or delete operations allowed.
+          <br><br>
+          <b>Example questions:</b>
+          <br>• "Bernardo Dias"
+          <br>• "Children of António"
+          <br>• "Documents from 1872"
+          <br>• "Properties in Porto"
+        </div>
+
+        <div style="margin-bottom:15px">
+          <label style="display:block;font-size:12px;margin-bottom:5px;color:#cbd5e1"><b>Question:</b></label>
+          <input id="chatQuestion" type="text" placeholder="ex: Bernardo Dias" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;box-sizing:border-box;font-size:12px" onkeypress="if(event.key==='Enter'){document.getElementById('btnSendQuery').click()}">
+        </div>
+
+        <div id="chatResponseContainer" style="display:none;margin-bottom:15px;padding:10px;background:#0f172a;border-radius:4px;border:1px solid #334155;max-height:250px;overflow-y:auto;font-size:11px">
+          <div id="chatResponse" style="color:#cbd5e1;line-height:1.6"></div>
+          <div id="chatHits" style="margin-top:10px;border-top:1px solid #334155;padding-top:10px"></div>
+        </div>
+
+        <button id="btnSendQuery" style="width:100%;padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500">🔍 Search</button>
+      </div>
+
     </div>
 
-    <div style="margin:15px 0">
-      <label style="display:block;font-size:12px;margin-bottom:5px"><b>📂 Importar ficheiro JSON:</b></label>
-      <input id="fileInput" type="file" accept=".json" style="width:100%;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;box-sizing:border-box;font-size:12px;cursor:pointer">
-      <button id="btnLoadFile" style="margin-top:8px;padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;width:100%"></button>
+    <!-- Close Button -->
+    <div style="border-top:1px solid #334155;padding:15px;background:#0f172a;text-align:right">
+      <button id="btnCloseSource" style="padding:8px 16px;background:#475569;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500">Close</button>
     </div>
+  </div>
+</div>
 
-    <button id="btnCloseSource" style="margin-top:15px;padding:8px 12px;background:#475569;color:#fff;border:none;border-radius:4px;cursor:pointer;width:100%">Fechar</button>
+<div id="textEditorModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:3100;align-items:center;justify-content:center;padding:20px">
+  <div id="textEditorPanel" style="display:flex;flex-direction:column;width:min(900px,95vw);height:min(680px,85vh);background:#1e293b;border:1px solid #475569;border-radius:8px;box-shadow:0 8px 40px #000;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:8px;padding:12px 15px;background:#0f172a;border-bottom:1px solid #334155">
+      <b id="textEditorTitle" style="flex:1;font-size:13px">Project file</b>
+      <button id="btnExpandTextEditor" title="Expand editor" style="padding:6px 10px;background:#334155;color:#fff;border:none;border-radius:4px;cursor:pointer">⛶</button>
+    </div>
+    <textarea id="textEditor" spellcheck="false" style="flex:1;resize:none;padding:16px;background:#020617;color:#e2e8f0;border:none;outline:none;font:12px/1.6 monospace"></textarea>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 15px;background:#0f172a;border-top:1px solid #334155">
+      <span id="textEditorFileName" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#94a3b8"></span>
+      <span id="textEditorSaveStatus" style="font-size:11px;color:#94a3b8"></span>
+      <button id="btnSaveTextEditor" style="padding:8px 16px;background:#10b981;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:500">Save</button>
+      <button id="btnCloseTextEditor" title="Close editor" aria-label="Close editor" style="width:32px;height:32px;padding:0;background:#475569;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:20px;line-height:1">×</button>
+    </div>
   </div>
 </div>
 
 <div id="archiveTooltip" style="display:none;position:fixed;top:50px;right:20px;background:#1e293b;color:#e2e8f0;border-radius:6px;border:1px solid #334155;box-shadow:0 4px 16px rgba(0,0,0,0.8);z-index:3000;overflow:hidden">
-  <div style="background:#0f172a;padding:8px 12px;border-bottom:1px solid #334155;font-size:12px;font-weight:500">📊 Estatísticas</div>
+  <div style="background:#0f172a;padding:8px 12px;border-bottom:1px solid #334155;font-size:12px;font-weight:500">📊 Statistics</div>
   <div style="padding:12px 16px;white-space:pre-line;font-size:12px;line-height:1.5"><span id="archiveTooltipContent">info</span></div>
 </div>
 
@@ -221,7 +415,7 @@ const esc=s=>{
 // Gender inference moved to build script (gender inferred from relations at build time, stored in person._sexo)
 // Initialized by loadConfig()
 
-// relação inversa: quando a pessoa vista é o ALVO (para), descrever da perspetiva dela.
+// Inverse relation: quando a pessoa vista é o ALVO (para), descrever da perspetiva dela.
 // S = sexo da pessoa vista; otherS = sexo do outro. Preserva nuance de divórcio/viuvez.
 // Relation text comes directly from metadata.relation field in docs_logical.json
 // No transformations needed - trust what GenAI set during OCR
@@ -236,6 +430,7 @@ const rowYs=[];                    // linhas-guia (genealogia)
 // Initialize app after config loads
 const params = new URLSearchParams(window.location.search);
 const PROJECT_NAME = params.get("project") || "cotimos";  // default: cotimos
+let LOADED_PROJECT_NAME = PROJECT_NAME;
 const PROJECT_BASE = `NotaryMindAi/projects/${PROJECT_NAME}`;
 
 // links (piclaw serve o workspace por HTTP; abrir em nova tab)
@@ -389,7 +584,7 @@ function openImageViewer(imgPath, allImages=[], currentIdx=0){
     rightContainer.style.display=showTranscription?"flex":"none";
     btnTranscript.style.background=showTranscription?"#555":"#333";
   };
-  // Botões centrais
+  // Buttons centrais
   centerButtons.appendChild(btnPrev);
   centerButtons.appendChild(btnNext);
   centerButtons.appendChild(btnZoomIn);
@@ -397,7 +592,7 @@ function openImageViewer(imgPath, allImages=[], currentIdx=0){
   centerButtons.appendChild(btnReset);
   centerButtons.appendChild(btnDownload);
 
-  // Botões direita
+  // Buttons direita
   rightButtons.appendChild(btnTranscript);
   rightButtons.appendChild(btnClose);
 
@@ -537,7 +732,7 @@ function docSrcLinks(d){
     if(!f.image||!/\.jpg$/i.test(f.image)) return;
     const imgEsc=esc(f.image).replace(/'/g,"\\'");
     const argsStr=imgs.map((img,i)=>"'"+esc(img).replace(/'/g,"\\'")+"'").join(",");
-    html+=`<div class="k">${esc(f.image)} - <a href="javascript:void(0)" onclick="openImageViewer('${imgEsc}',[${argsStr}],${idx})" title="Ver imagem">🖼️</a> <a href="javascript:openJsonViewer('${imgEsc}')" title="Ver JSON">📋</a></div>`;
+    html+=`<div class="k">${esc(f.image)} - <a href="javascript:void(0)" onclick="openImageViewer('${imgEsc}',[${argsStr}],${idx})" title="View image">🖼️</a> <a href="javascript:openJsonViewer('${imgEsc}')" title="View JSON">📋</a></div>`;
   });
   return html || `<div class="k">-</div>`;
 }
@@ -554,10 +749,10 @@ function docDetails(d){ if(!d) return "";
     : "";
   const head=`<b>${esc(d.id)}</b>${imageIconHtml} - ${tipo}${esc((d.title||"").slice(0,110))} <span class="k">📅 ${esc((d.document_date||[]).join("; "))}</span>`;
   let html=`<details class="docsrc"><summary>${head}</summary><div class="srcbox">`;
-  if(transcr) html+=`<h4 style="margin-top:0;font-weight:600;cursor:pointer;user-select:none"><span data-expand="▶">&#9656;</span> Transcrição Integral</h4><div class="k" style="padding:8px;margin-top:8px;background:#f9fafb;border-radius:2px;white-space:pre-wrap;font-family:monospace;font-size:0.85em;overflow-y:auto;display:none" data-transcr data-content="${esc(transcr)}"><div style="display:flex;gap:6px;margin-bottom:8px"><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-copy>Copiar</button><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-fullscreen>Expandir</button></div>${esc(transcr)}</div>`;
-  if(obs) html+=`<h4 style="margin-top:8px;font-weight:600;cursor:pointer;user-select:none"><span data-expand="▶">&#9656;</span> Resumo OCR</h4><div class="k" style="padding:6px;margin-top:8px;background:#f9fafb;border-radius:2px;display:none" data-obs data-content="${esc(obs)}"><div style="display:flex;gap:6px;margin-bottom:8px"><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-copy>Copiar</button><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-fullscreen>Expandir</button></div>${esc(obs)}</div>`;
-  html+=`<h4 style="margin-top:8px;font-weight:600;cursor:pointer;user-select:none"><span data-expand="▶">&#9656;</span> Listagem de Ficheiros</h4><div style="padding:6px;margin-top:8px;background:#f9fafb;border-radius:2px;display:none" data-files>${fontes}</div>`;
-  html+=`<button class="btn" style="margin-top:8px;width:100%" data-gotoDoc="DL:${d.id}">Ir para documento ↴</button>`;
+  if(transcr) html+=`<h4 style="margin-top:0;font-weight:600;cursor:pointer;user-select:none"><span data-expand="▶">&#9656;</span> Full Transcript</h4><div class="k" style="padding:8px;margin-top:8px;background:#f9fafb;border-radius:2px;white-space:pre-wrap;font-family:monospace;font-size:0.85em;overflow-y:auto;display:none" data-transcr data-content="${esc(transcr)}"><div style="display:flex;gap:6px;margin-bottom:8px"><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-copy>Copy</button><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-fullscreen>Expand</button></div>${esc(transcr)}</div>`;
+  if(obs) html+=`<h4 style="margin-top:8px;font-weight:600;cursor:pointer;user-select:none"><span data-expand="▶">&#9656;</span> OCR Summary</h4><div class="k" style="padding:6px;margin-top:8px;background:#f9fafb;border-radius:2px;display:none" data-obs data-content="${esc(obs)}"><div style="display:flex;gap:6px;margin-bottom:8px"><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-copy>Copy</button><button class="btn" style="flex:1;padding:4px 8px;font-size:0.8em" data-fullscreen>Expand</button></div>${esc(obs)}</div>`;
+  html+=`<h4 style="margin-top:8px;font-weight:600;cursor:pointer;user-select:none"><span data-expand="▶">&#9656;</span> File List</h4><div style="padding:6px;margin-top:8px;background:#f9fafb;border-radius:2px;display:none" data-files>${fontes}</div>`;
+  html+=`<button class="btn" style="margin-top:8px;width:100%" data-gotoDoc="DL:${d.id}">Go to document ↴</button>`;
   html+=`</div></details>`;
   return html; }
 // cria uma aresta = traço visível (sem eventos) + traço transparente largo para hover/click
@@ -581,11 +776,11 @@ const CANDIDATES=[
 async function loadFromUrl(url){
   try {
     const r = await fetch(url);
-    if(!r.ok) { alert('Erro ao carregar: ' + r.status); return null; }
+    if(!r.ok) { alert('Error loading: ' + r.status); return null; }
     CURRENT_SOURCE = url;
     return await r.json();
   } catch(e) {
-    alert('Erro: ' + e.message);
+    alert('Error: ' + e.message);
     return null;
   }
 }
@@ -597,7 +792,7 @@ async function loadFromFile(file){
     CURRENT_SOURCE = file.name;
     return data;
   } catch(e) {
-    alert('Erro ao parsear JSON: ' + e.message);
+    alert('Error parsing JSON: ' + e.message);
     return null;
   }
 }
@@ -626,7 +821,7 @@ function updateDocDetailsHeader(imageName) {
     }
   });
 
-  header.innerHTML = `<div style="margin-bottom:2px">📄 <b>${esc(docId)}</b> - ${esc(tipo)}</div><div style="margin-bottom:2px">📅 ${esc(data)}</div><div style="margin-bottom:2px">📝 ${esc(titulo)}</div><div style="margin-bottom:2px">📍 ${esc(loc)}</div><div style="margin-bottom:2px;font-size:10px;opacity:0.8">📄 ${esc(imageName)} · OCR: ${esc(confidence)}</div><div style="font-weight:500;margin-top:6px">📝 Transcrição:</div>`;
+  header.innerHTML = `<div style="margin-bottom:2px">📄 <b>${esc(docId)}</b> - ${esc(tipo)}</div><div style="margin-bottom:2px">📅 ${esc(data)}</div><div style="margin-bottom:2px">📝 ${esc(titulo)}</div><div style="margin-bottom:2px">📍 ${esc(loc)}</div><div style="margin-bottom:2px;font-size:10px;opacity:0.8">📄 ${esc(imageName)} · OCR: ${esc(confidence)}</div><div style="font-weight:500;margin-top:6px">📝 Transcript:</div>`;
 }
 
 async function loadTranscriptionForImage(imageName) {
@@ -641,12 +836,12 @@ async function loadTranscriptionForImage(imageName) {
       response = await fetch(jsonPath);
     }
 
-    if(!response.ok) return "Transcrição não disponível";
+    if(!response.ok) return "Transcript not available";
     const data = await response.json();
-    const txt = data.full_transcript || "Sem transcrição"; console.log("✓ Transcrição carregada para", imageName, txt.length, "chars"); return txt;
+    const txt = data.full_transcript || "No transcript"; console.log("✓ Transcript loaded para", imageName, txt.length, "chars"); return txt;
   } catch(e) {
-    console.error("Erro ao carregar transcrição:", e);
-    return "Erro ao carregar transcrição";
+    console.error("Error loading transcript:", e);
+    return "Error loading transcript";
   }
 }
 
@@ -659,6 +854,14 @@ async function reloadData(data){
   if(!data) { document.getElementById("empty").innerHTML="<b>"+CONFIG.ui_strings.status.error_loading+"</b>"; return; }
   document.getElementById("sourceModal").style.display="none";
   document.getElementById("empty").style.display="none";
+  const rawPersons = Array.isArray(data.persons) ? data.persons.length : 0;
+  const rawRelations = Array.isArray(data.relations) ? data.relations.length : 0;
+  const rawProperties = Array.isArray(data.properties)
+    ? data.properties.length
+    : (Array.isArray(data.documents) ? data.documents.reduce((total, document) => total + (Array.isArray(document.properties) ? document.properties.length : 0), 0) : 0);
+  const rawImages = Number(data.total_images) || (Array.isArray(data.documents) ? data.documents.reduce((total, document) => total + Number(document.n_images || (document.sources || []).length), 0) : 0);
+  const statsCounts = document.getElementById("statsCounts");
+  if(statsCounts) statsCounts.textContent = `${rawImages} images · ${rawPersons} persons · ${rawRelations} relations · ${rawProperties} properties`;
   try {
     DATA=data; 
     MODEL=buildModel(data);
@@ -674,8 +877,13 @@ async function reloadData(data){
   }
   if(data.name) {
     const archEl = document.getElementById("archiveName");
-    archEl.textContent = data.name;
-    const ts = data.timestamp ? new Date(data.timestamp).toLocaleString('pt-PT') : "-";
+    const dataName = String(data.name);
+    const loadedName = String(LOADED_PROJECT_NAME || PROJECT_NAME);
+    const archiveLabel = loadedName.toLowerCase() === "cotimos" || norm(dataName) === norm(loadedName)
+      ? dataName
+      : loadedName;
+    archEl.textContent = archiveLabel;
+    const ts = data.timestamp ? new Date(data.timestamp).toLocaleString('en-GB') : "-";
     const model = data.model || "-";
     const desc = data.description || "-";
     const docs = data.total_logical_documents || 0;
@@ -687,33 +895,10 @@ async function reloadData(data){
       tooltipContent.textContent = `📄 ${docs} documents · 📄 ${imgs} images\n📅 ${ts}\n🤖 ${model}\n📝 ${desc}`;
     }
   }
-  document.getElementById("stats").textContent=`${MODEL.people.length} persons · ${MODEL.relations.length} relations · ${MODEL.properties.length} properties`;
+  document.getElementById("statsCounts").textContent=`${MODEL.people.length} persons · ${MODEL.relations.length} relations · ${MODEL.properties.length} properties`;
   document.getElementById("bar").style.display="flex";
   setView("gen");
 
-  // Setup tooltip modal
-  setTimeout(() => {
-    const archEl = document.getElementById("archiveName");
-    const tooltipModal = document.getElementById("archiveTooltip");
-    const tooltipContent = document.getElementById("archiveTooltipContent");
-
-    if(!archEl || !tooltipModal) {
-      console.error("Elements missing:", {archEl, tooltipModal});
-      return;
-    }
-
-    archEl.addEventListener("click", (e) => {
-      e.stopPropagation();
-      console.log("Archive name clicked");
-      tooltipModal.style.display = tooltipModal.style.display === "none" ? "block" : "none";
-    });
-
-    document.addEventListener("click", (e) => {
-      if(e.target !== archEl && e.target !== tooltipModal && !tooltipModal.contains(e.target)) {
-        tooltipModal.style.display = "none";
-      }
-    });
-  }, 100);
 }
 
 function buildModel(data){
@@ -1285,8 +1470,8 @@ function openPanel(html,drillId){ panel.innerHTML=`<button class="close">${CONFI
           <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid #ddd;flex-shrink:0">
             <h3 style="margin:0;flex:1">${esc(title)}</h3>
             <div style="display:flex;gap:8px">
-              <button style="padding:8px 16px;background:#3b82f6;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600">Copiar Tudo</button>
-              <button style="padding:8px 16px;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600">Fechar</button>
+              <button style="padding:8px 16px;background:#3b82f6;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600">Copy Tudo</button>
+              <button style="padding:8px 16px;background:#ef4444;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600">Close</button>
             </div>
           </div>
           <div style="flex:1;overflow-y:auto;padding:16px;background:#f9fafb;white-space:pre-wrap;font-family:monospace;font-size:0.9em;line-height:1.5;min-height:0">${esc(content)}</div>
@@ -1298,7 +1483,7 @@ function openPanel(html,drillId){ panel.innerHTML=`<button class="close">${CONFI
           navigator.clipboard.writeText(content).then(()=>{
             copyBtn.textContent=CONFIG.ui_strings.status.copied;
             setTimeout(()=>{ copyBtn.textContent=CONFIG.ui_strings.buttons.copy_all; },2000);
-          }).catch(err=>console.error("Erro ao copiar:", err));
+          }).catch(err=>console.error("Copy failed:", err));
         };
         closeBtn.onclick=()=>{ modal.remove(); };
         modal.onclick=(ev)=>{ if(ev.target===modal) modal.remove(); };
@@ -1326,7 +1511,7 @@ function showPerson(id){
   const vidas=[p.birth?`n. ${p.birth}`:"",p.baptism?`bapt. ${p.baptism}`:"",p.death?`† ${p.death}`:""].filter(Boolean).join(" · ");
   if(vidas) h+=`<div><span class="k">${getIcon("dates")}</span> ${esc(vidas)}</div>`;
   if(p.variants?.length) h+=`<div><span class="k">${getIcon("variants")}</span> ${esc(p.variants.map(v=>typeof v === 'string' ? v : v.name || v).join("; "))}</div>`;
-  if(p.gender) h+=`<div><span class="k">${getIcon("gender")}</span> ${esc(p.gender==="F"?"Feminino":"Masculino")}${p.gender_source && p.gender_source !== 'explicit' ? ` (${p.gender_source})` : ''}</div>`;
+  if(p.gender) h+=`<div><span class="k">${getIcon("gender")}</span> ${esc(p.gender==="F"?"Female":"Male")}${p.gender_source && p.gender_source !== 'explicit' ? ` (${p.gender_source})` : ''}</div>`;
   if(p.alias) h+=`<div><span class="k">${getIcon("alias")}</span> ${esc(p.alias)}</div>`;
   if(p.natural) h+=`<div><span class="k">${getIcon("birthplace")}</span> ${esc(p.natural)}</div>`;
   if(p.residencia) h+=`<div><span class="k">${getIcon("residence")}</span> ${esc(p.residencia)}</div>`;
@@ -1334,19 +1519,19 @@ function showPerson(id){
   if(p.burial) h+=`<div><span class="k">${getIcon("burial")}</span> ${esc(p.burial)}</div>`;
   if(p.notes) h+=`<div><span class="k">${getIcon("notes")}</span> ${esc(p.notes)}</div>`;
   const rel=MODEL.relations.filter(r=>r.deId===p.id||r.paraId===p.id);
-  if(rel.length){ h+=`<h3>Relações</h3><ul>`+rel.map(r=>{
+  if(rel.length){ h+=`<h3>Relations</h3><ul>`+rel.map(r=>{
     let other, dir;
     if(r.deId===p.id){ other=r.to; dir=r.relation; }
     else { other=r.from; dir=r.relation; }
-    const meta=[r.status||"",r.location?`em ${r.location}`:"",r.date?`data ${r.date}`:"",r.value?`valor ${r.value}`:"",r.property||"",r.notes||""].filter(Boolean).join("; ");
+    const meta=[r.status||"",r.location?`at ${r.location}`:"",r.date?`date ${r.date}`:"",r.value?`value ${r.value}`:"",r.property||"",r.notes||""].filter(Boolean).join("; ");
     return `<li>${esc(dir)} <b>${esc(other)}</b> <span class="k">${r.source?`[${esc(r.source)}]`:""}${meta?" - "+esc(meta):""}</span></li>`; }).join("")+`</ul>`; }
-  if(p._props?.length){ h+=`<h3>Propriedades (purchase/sale) (${p._props.length})</h3><ul>`+p._props.map(pr=>
+  if(p._props?.length){ h+=`<h3>Properties (purchase/sale) (${p._props.length})</h3><ul>`+p._props.map(pr=>
     `<li><b>${esc(pr.role)}</b> - ${esc((pr.description||pr.title||"").slice(0,80))} <span class="k">${esc(pr.location||"")}${pr.article?" · art. "+pr.article:""}</span><br/><span class="k">🛍️ ${esc(pr.seller||"?")}</span><br/><span class="k">🛒 ${esc(pr.buyer||"?")}</span><br/><span class="k">Data: ${esc(pr.date||"")} · Value: ${esc(pr.value_tx||pr.value||"")} · Doc: ${esc(pr.document||"")}</span></li>`).join("")+`</ul>`; }
-  if(p._docs?.length){ h+=`<h3>Documentos onde aparece (${p._docs.length})</h3>`+p._docs.map(did=>docDetails(dById[did])).join(""); }
+  if(p._docs?.length){ h+=`<h3>Documents containing this person (${p._docs.length})</h3>`+p._docs.map(did=>docDetails(dById[did])).join(""); }
   const vendidas=p._props?.filter(pr=>pr.role==="vendeu")||[];
   h+=`<h3>Navigation</h3><div>`;
-  if(vendidas.length) h+=`<button class="btn" data-drill-prop="${esc(id)}">Propriedades Vendidas (${vendidas.length}) ↴</button> `;
-  h+=`<button class="btn">Ver ligações ↴</button></div>`;
+  if(vendidas.length) h+=`<button class="btn" data-drill-prop="${esc(id)}">Sold Properties (${vendidas.length}) ↴</button> `;
+  h+=`<button class="btn">View connections ↴</button></div>`;
   openPanel(h,id);
   const drillProp=panel.querySelector("[data-drill-prop]");
   if(drillProp) drillProp.onclick=()=>{
@@ -1374,8 +1559,8 @@ function showPerson(id){
 }
 function showProp(id){
   const pr=MODEL.properties.find(x=>x.id===id); if(!pr){return;}
-  let h=`<h2>${esc((pr.description||"propriedade").slice(0,80))}</h2><div class="role">${esc(pr.type||"")} · ${esc(pr.document)}</div>`;
-  h+=row("Documento",`${pr.document}${pr.title?" - "+pr.title:""}`)+row("Tipo documento",pr.type)+row("Data documento",pr.date);
+  let h=`<h2>${esc((pr.description||"property").slice(0,80))}</h2><div class="role">${esc(pr.type||"")} · ${esc(pr.document)}</div>`;
+  h+=row("Document",`${pr.document}${pr.title?" - "+pr.title:""}`)+row("Document type",pr.type)+row("Document date",pr.date);
   h+=row("Location",pr.location)+row("Parish",pr.parish)+row("Article",pr.article)+row("Nature",pr.property_nature)+row("Area",pr.area)+row("Quota",pr.quota)+row("Value",pr.value);
   if(pr.buyer || pr.seller){
     h+=`<div style="background:#f3f4f6;border-left:4px solid #dc2626;padding:8px;margin:8px 0;border-radius:2px">`;
@@ -1385,15 +1570,15 @@ function showProp(id){
   }
   h+=row("Transaction Nature",pr.nature);
   if(pr.confrontacoes){ const c=pr.confrontacoes; const cc=["norte","sul","este","oeste"].map(k=>c[k]?`${k[0].toUpperCase()}: ${c[k]}`:"").filter(Boolean).join(" · ");
-    if(cc) h+=`<h3>Confrontações</h3><div>${esc(cc)}</div>`; }
+    if(cc) h+=`<h3>Boundaries</h3><div>${esc(cc)}</div>`; }
   const m=(pr.article||"").match(/^\s*(\d{1,5})\s*$/);
   if(m){ const cl=MODEL.sameArticle.find(([a])=>a===m[1]);
     if(cl){ const chain=cl[1].slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
       h+=`<h3>Transmissions (art. ${esc(m[1])})</h3><ul>`+chain.map(x=>{ const parties=[clean(x.seller),clean(x.buyer)].filter(Boolean).join(" → ");
         return `<li>${esc(x.date||"no date")} - <b>${esc(x.doc)}</b>${parties?` <span class="k">${esc(parties)}</span>`:""}${x.value?` · ${esc(x.value)}`:""}</li>`; }).join("")+`</ul>`; } }
-  const pdoc=MODEL.docById[pr.document]; if(pdoc){ h+=`<h3>Documentos onde aparece</h3>`+docDetails(pdoc); }
-  else if(pr._fonte){ h+=`<h3>Fonte</h3><div class="k">${esc(pr._fonte)} - ${srcLinks(pr._fonte)}</div>`; }
-  h+=`<button class="btn">Ver ligações ↴</button>`;
+  const pdoc=MODEL.docById[pr.document]; if(pdoc){ h+=`<h3>Documents containing this property</h3>`+docDetails(pdoc); }
+  else if(pr._fonte){ h+=`<h3>Source</h3><div class="k">${esc(pr._fonte)} - ${srcLinks(pr._fonte)}</div>`; }
+  h+=`<button class="btn">View connections ↴</button>`;
   openPanel(h,id);
 }
 function drill(id){ focusId=id; applyFocus(); const pos=view==="gen"?posGen:view==="doc"?posDoc:posProp; zoomTo(pos,[...neighbors(id)]); }
@@ -1479,7 +1664,7 @@ function docMenuHandler(action, docId, btn){
       zoomTo(posDoc,[...neighbors(docId)]);
       break;
     case 'copyAll': // copiar dados completos do documento
-      const txt=`${d.id}\n${d.title}\n${d.document_type}\nData: ${(d.document_date||[]).join("; ")}\n${(d.properties||[]).map(p=>p.description).join("\n")}`;
+      const txt=`${d.id}\n${d.title}\n${d.document_type}\nDate: ${(d.document_date||[]).join("; ")}\n${(d.properties||[]).map(p=>p.description).join("\n")}`;
       navigator.clipboard.writeText(txt).then(()=>{
         if(btn){
           const orig=btn.textContent;
@@ -1498,22 +1683,22 @@ function docMenuHandler(action, docId, btn){
 function showDoc(id){
   const d=MODEL.docById[id.slice(3)]; if(!d)return;
   let h=`<h2>${esc(d.id)} - ${esc((d.title||"").slice(0,80))}</h2><div class="role">${esc(d.document_type||"")}</div>`;
-  h+=row("Data",(d.document_date||[]).join("; "))+row("Location",(d.location||[]).join("; "))+row("Imagens",String(d.n_images||(d.sources||[]).length));
+  h+=row("Date",(d.document_date||[]).join("; "))+row("Location",(d.location||[]).join("; "))+row("Images",String(d.n_images||(d.sources||[]).length));
   if(d.transaction){ const t=d.transaction;
-    h+=`<h3>Transação</h3>`+row("Nature",t.nature)+row("Value",t.value);
+    h+=`<h3>Transaction</h3>`+row("Nature",t.nature)+row("Value",t.value);
     h+=`<div style="background:#f3f4f6;border-left:4px solid #dc2626;padding:8px;margin:8px 0;border-radius:2px">`;
-    if(t.seller) h+=`<div><b style="color:#dc2626">🛍️ Seller:</b> <span class="docMenuLink" data-person="${nameToId[norm(t.seller)]||'P:'+norm(t.seller)}" title="clique para ir">${esc(t.seller)}</span></div>`;
-    if(t.buyer) h+=`<div style="margin-top:4px"><b style="color:#16a34a">🛒 Buyer:</b> <span class="docMenuLink" data-person="${nameToId[norm(t.buyer)]||'P:'+norm(t.buyer)}" title="clique para ir">${esc(t.buyer)}</span></div>`;
+    if(t.seller) h+=`<div><b style="color:#dc2626">🛍️ Seller:</b> <span class="docMenuLink" data-person="${nameToId[norm(t.seller)]||'P:'+norm(t.seller)}" title="Open person">${esc(t.seller)}</span></div>`;
+    if(t.buyer) h+=`<div style="margin-top:4px"><b style="color:#16a34a">🛒 Buyer:</b> <span class="docMenuLink" data-person="${nameToId[norm(t.buyer)]||'P:'+norm(t.buyer)}" title="Open person">${esc(t.buyer)}</span></div>`;
     h+=`</div>`;
   }
-  if((d.properties||[]).length){ h+=`<h3>Propriedades (${d.properties.length})</h3><ul>`+d.properties.map(pr=>`<li>${esc((pr.description||"").slice(0,50))} <span class="k">${esc(pr.location||"")}</span></li>`).join("")+`</ul>`; }
+  if((d.properties||[]).length){ h+=`<h3>Properties (${d.properties.length})</h3><ul>`+d.properties.map(pr=>`<li>${esc((pr.description||"").slice(0,50))} <span class="k">${esc(pr.location||"")}</span></li>`).join("")+`</ul>`; }
   const ppl=involvedPeople(d);
-  if(ppl.size){ h+=`<h3>Pessoas envolvidas</h3><ul>`+[...ppl.entries()].map(([pid,v])=>`<li><span class="docMenuLink" data-person="${pid}" title="clique para ir">${esc(v.name)}</span> <span class="k">${v.role?`[${esc(v.role)}]`:`[?]`}</span></li>`).join("")+`</ul>`; }
-  h+=row("Notário/Tabelião",d.notario)+row("Tribunal/Cartório",d.tribunal)+row("Processo no",d.numero_processo)+row("Value total",d.valor_total);
-  const ents=(d.entities?.names||[]); if(ents.length){ h+=`<h3>Entidades (${ents.length})</h3><div class="k">${esc(ents.slice(0,40).join(" · "))}</div>`; }
-  h+=`<h3>Documentos onde aparece</h3>`+docDetails(d);
+  if(ppl.size){ h+=`<h3>People involved</h3><ul>`+[...ppl.entries()].map(([pid,v])=>`<li><span class="docMenuLink" data-person="${pid}" title="Open person">${esc(v.name)}</span> <span class="k">${v.role?`[${esc(v.role)}]`:`[?]`}</span></li>`).join("")+`</ul>`; }
+  h+=row("Notary",d.notario)+row("Court / Registry",d.tribunal)+row("Case number",d.numero_processo)+row("Total value",d.valor_total);
+  const ents=(d.entities?.names||[]); if(ents.length){ h+=`<h3>Entities (${ents.length})</h3><div class="k">${esc(ents.slice(0,40).join(" · "))}</div>`; }
+  h+=`<h3>Document details</h3>`+docDetails(d);
   h+=`<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">`;
-  h+=`<button class="btn" onclick="docMenuHandler('explore','${esc(id)}',this)">Ver ligações ↴</button>`;
+  h+=`<button class="btn" onclick="docMenuHandler('explore','${esc(id)}',this)">View connections ↴</button>`;
   h+=`</div>`;
   openPanel(h,id);
   // event delegation para links de pessoa no menu
@@ -1547,7 +1732,7 @@ function showDoc(id){
         const content=h4.nextElementSibling.dataset.content;
         navigator.clipboard.writeText(content).then(()=>{
           const orig=copyBtn.textContent;
-          copyBtn.textContent="✓ Copiado!";
+          copyBtn.textContent="✓ Copied!";
           setTimeout(()=>{ copyBtn.textContent=orig; },2000);
         });
       };
@@ -1561,7 +1746,7 @@ function showDoc(id){
         const content=h4.nextElementSibling.dataset.content;
         const modal=document.createElement("div");
         modal.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px";
-        modal.innerHTML=`<div style="background:white;border-radius:8px;padding:20px;max-width:90%;max-height:90%;overflow:auto;position:relative;box-shadow:0 4px 20px rgba(0,0,0,0.3)"><button style="position:absolute;top:10px;right:10px;padding:5px 10px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;cursor:pointer" onclick="this.closest('div').parentElement.remove()">Fechar ✕</button><h3 style="margin-top:0">${esc(h4.textContent.trim())}</h3><pre style="white-space:pre-wrap;font-family:monospace;font-size:0.85em;overflow:auto">${esc(content)}</pre></div>`;
+        modal.innerHTML=`<div style="background:white;border-radius:8px;padding:20px;max-width:90%;max-height:90%;overflow:auto;position:relative;box-shadow:0 4px 20px rgba(0,0,0,0.3)"><button style="position:absolute;top:10px;right:10px;padding:5px 10px;border:1px solid #ccc;border-radius:4px;background:#f5f5f5;cursor:pointer" onclick="this.closest('div').parentElement.remove()">Close ✕</button><h3 style="margin-top:0">${esc(h4.textContent.trim())}</h3><pre style="white-space:pre-wrap;font-family:monospace;font-size:0.85em;overflow:auto">${esc(content)}</pre></div>`;
         modal.onclick=(ev)=>{ if(ev.target===modal) modal.remove(); };
         document.body.appendChild(modal);
       };
@@ -1577,25 +1762,25 @@ function showRelation(p){
   h+=`<div><b>${esc(nm(b))}</b> ${esc(rel||CAT_LABEL[cat]||cat)} <b>${esc(nm(a))}</b></div>`;
   const full=MODEL.relations.find(r=>r.cat===cat&&((r.deId===a&&r.paraId===b)||(r.deId===b&&r.paraId===a)));
   if(full){
-    const meta=[full.status?`Estado: ${full.status}`:"",full.location?`Local: ${full.location}`:"",full.date?`Data: ${full.date}`:"",full.value?`Valor: ${full.value}`:"",full.property?`Propriedade: ${full.property}`:"",full.notes?`Notas: ${full.notes}`:""].filter(Boolean);
+    const meta=[full.status?`Status: ${full.status}`:"",full.location?`Location: ${full.location}`:"",full.date?`Date: ${full.date}`:"",full.value?`Value: ${full.value}`:"",full.property?`Property: ${full.property}`:"",full.notes?`Notes: ${full.notes}`:""].filter(Boolean);
     if(meta.length) h+=`<div class="k" style="margin-top:6px">${esc(meta.join(" · "))}</div>`;
     // Inference details (v2.0)
     if(full.inferedbyai || full.inference_type) {
       const inferenceInfo = [];
-      if(full.inference_type) inferenceInfo.push(`Tipo: ${full.inference_type}`);
-      if(full.inference_confidence) inferenceInfo.push(`Confiança: ${full.inference_confidence}`);
-      if(full.inference_reasoning) inferenceInfo.push(`Motivo: ${full.inference_reasoning}`);
-      if(inferenceInfo.length) h += `<div style="margin-top:8px;padding:6px;background:#f9fafb;border-left:3px solid #7c3aed;font-size:11px;color:#475569"><b>🧐 Inferência</b><br>${esc(inferenceInfo.join(" · "))}</div>`;
+      if(full.inference_type) inferenceInfo.push(`Type: ${full.inference_type}`);
+      if(full.inference_confidence) inferenceInfo.push(`Confidence: ${full.inference_confidence}`);
+      if(full.inference_reasoning) inferenceInfo.push(`Reason: ${full.inference_reasoning}`);
+      if(inferenceInfo.length) h += `<div style="margin-top:8px;padding:6px;background:#f9fafb;border-left:3px solid #7c3aed;font-size:11px;color:#475569"><b>🧐 Inference</b><br>${esc(inferenceInfo.join(" · "))}</div>`;
     }
   }
   const docSet=new Map();
   if(doc&&MODEL.docById[doc]) docSet.set(doc,MODEL.docById[doc]);
   (full?.source_images||[]).forEach(img=>{ const did=MODEL.imgToDoc?.[img]; if(did&&MODEL.docById[did]) docSet.set(did,MODEL.docById[did]); });
-  if(docSet.size){ h+=`<h3>Documentos onde aparece (${docSet.size})</h3>`+[...docSet.values()].map(docDetails).join(""); }
+  if(docSet.size){ h+=`<h3>Documents containing this relation (${docSet.size})</h3>`+[...docSet.values()].map(docDetails).join(""); }
   h+=`<h3>Navigation</h3><div>`;
-  if(a) h+=`<button class="btn" data-see="${esc(a)}">ver ${esc((nm(a)||"").slice(0,22))}</button> `;
-  if(b) h+=`<button class="btn" data-see="${esc(b)}">ver ${esc((nm(b)||"").slice(0,22))}</button> `;
-  if(doc&&MODEL.docById[doc]) h+=`<button class="btn" data-openview="DL:${esc(doc)}">Open in vista Documentos ↴</button>`;
+  if(a) h+=`<button class="btn" data-see="${esc(a)}">View ${esc((nm(a)||"").slice(0,22))}</button> `;
+  if(b) h+=`<button class="btn" data-see="${esc(b)}">View ${esc((nm(b)||"").slice(0,22))}</button> `;
+  if(doc&&MODEL.docById[doc]) h+=`<button class="btn" data-openview="DL:${esc(doc)}">Open in Documents view ↴</button>`;
   h+=`</div>`;
   openPanel(h);
   panel.querySelectorAll("[data-see]").forEach(bt=>bt.onclick=()=>selectNode(bt.dataset.see));
@@ -1629,7 +1814,7 @@ function buildFilters(){
     lab.querySelector("input").addEventListener("change",e=>{ e.target.checked?hidden.delete(c):hidden.add(c); rerender(); });
     f.appendChild(lab); });
   if(view==="prop"){ const lab=document.createElement("label");
-    lab.innerHTML=`<input type="checkbox" id="onlyProps"/> só properties (liga mesma-propriedade)`;
+    lab.innerHTML=`<input type="checkbox" id="onlyProps"/> properties only (link matching properties)`;
     lab.querySelector("input").addEventListener("change",rerender); f.appendChild(lab); }
 }
 function rerender(){ view==="gen"?renderGen():view==="doc"?renderDoc():renderProp(); }
@@ -1663,86 +1848,568 @@ window.addEventListener("resize",refit);
     reloadData(data);
     setupSourceModal();
   } catch(e) {
-    document.getElementById("sub").textContent="erro: "+e.message;
+    document.getElementById("sub").textContent="Error: "+e.message;
     document.getElementById("empty").style.display="block";
-    document.getElementById("empty").innerHTML=`<b>Não consegui carregar dados.</b><br><br>Projeto: <code>${PROJECT_NAME}</code><br>Verifique que <code>schema.json</code> e <code>docs_logical.json</code> estão acessíveis.<br><br>Em alternativa (serviço estático): <code>cd NotaryMindAi && python3 -m http.server 8000</code> e abre <code>http://localhost:8000/ui/main.html?project=${PROJECT_NAME}</code>`;
+    document.getElementById("empty").innerHTML=`<b>Could not load data.</b><br><br>Project: <code>${PROJECT_NAME}</code><br>Check that <code>schema.json</code> and <code>docs_logical.json</code> are accessible.<br><br>Static server alternative: <code>cd NotaryMindAi && python3 -m http.server 8000</code>, then open <code>http://localhost:8000/ui/main.html?project=${PROJECT_NAME}</code>`;
     setupSourceModal();
   }
 })();;
 
 
 
-// Tooltip: hover + click toggle
-setTimeout(() => {
-  const archEl = document.getElementById("archiveName");
-  if(!archEl) return;
-
-  // Teste: adicionar conteúdo default ao tooltip
-  const tooltip = archEl.querySelector(".tooltip");
-  if(tooltip && !tooltip.textContent) {
-    tooltip.textContent = "📄 0 documents · 📄 0 images\n📅 carregando...\n🤖 -\n📝 -";
-  }
-
-  archEl.addEventListener("mousemove", (e) => {
-    const tooltip = archEl.querySelector(".tooltip");
-    if(!tooltip) return;
-    tooltip.style.left = (e.clientX + 10) + "px";
-    tooltip.style.top = (e.clientY + 10) + "px";
-  });
-
-  archEl.addEventListener("click", (e) => {
-    e.stopPropagation();
-    archEl.classList.toggle("active");
-  });
-
-  document.addEventListener("click", () => {
-    archEl.classList.remove("active");
-  });
-}, 100);
-
 // Event listeners para modal de fonte (safe: verifica existência)
 const setupSourceModal = () => {
   const modal = document.getElementById("sourceModal");
-  const btnCloseSource = document.getElementById("btnCloseSource");
-  const btnLoadUrl = document.getElementById("btnLoadUrl");
-  const btnLoadFile = document.getElementById("btnLoadFile");
+  if(!modal) return;
+
+  const getAPIBases = () => {
+    const configured = new URLSearchParams(window.location.search).get("api");
+    return [...new Set([
+      configured,
+      "",
+      "http://localhost:8787",
+      "http://localhost:8790",
+    ].filter(base => base !== null))];
+  };
+  const API_BASES = getAPIBases();
+  const apiFetch = async (path, options = {}) => {
+    const failures = [];
+    for(const base of API_BASES) {
+      try {
+        const response = await fetch(`${base}${path}`, options);
+        const contentType = response.headers.get("content-type") || "";
+        if(contentType.includes("application/json")) return response;
+        failures.push(`${base || "same origin"}: returned ${contentType || "unknown content"}`);
+      } catch(error) {
+        failures.push(`${base || "same origin"}: ${error.message}`);
+      }
+    }
+    throw new Error(`API unavailable (${failures.join("; ")})`);
+  };
+  let projectsCache = [];
+
+  const archiveName = document.getElementById("archiveName");
+  const archiveTooltip = document.getElementById("archiveTooltip");
+  if(archiveName && archiveTooltip) {
+    archiveName.addEventListener("click", (event) => {
+      event.stopPropagation();
+      archiveTooltip.style.display = archiveTooltip.style.display === "none" ? "block" : "none";
+    });
+    document.addEventListener("click", (event) => {
+      if(event.target !== archiveName && event.target !== archiveTooltip && !archiveTooltip.contains(event.target)) {
+        archiveTooltip.style.display = "none";
+      }
+    });
+  }
+
+  const updateHeaderProjectStatus = (project) => {
+    const badge = document.getElementById("projectStatus");
+    const counts = document.getElementById("statsCounts");
+    const tooltip = document.getElementById("archiveTooltipContent");
+    if(!badge) return;
+    if(!project) {
+      badge.style.display = "inline-block";
+      badge.style.color = "#fbbf24";
+      badge.textContent = "⚠ Status unavailable";
+      badge.title = "The loaded project was not found in the project API.";
+      if(tooltip) tooltip.textContent += "\n⚠ Project status: unavailable";
+      return;
+    }
+
+    const images = Number(project.images) || 0;
+    const pending = Number(project.pendingMetadata) || 0;
+    const stale = Number(project.staleMetadata) || 0;
+    const reasons = [];
+    if(images === 0) reasons.push("no imported images");
+    if(pending) reasons.push(`${pending} image${pending === 1 ? "" : "s"} without metadata`);
+    if(stale) reasons.push(`${stale} stale metadata file${stale === 1 ? "" : "s"}`);
+    if(!project.hasMap) reasons.push("document map missing");
+    if(!project.hasGlossary) reasons.push("glossary missing");
+    if(!project.hasData) reasons.push("consolidated data missing");
+
+    if(counts) {
+      counts.textContent = `${Number(project.persons) || 0} persons · ${Number(project.relations) || 0} relations · ${Number(project.properties) || MODEL?.properties?.length || 0} properties`;
+    }
+    const ready = reasons.length === 0;
+    const reason = ready ? "All required project files and metadata are up to date." : reasons.join("; ");
+    const pendingFiles = Array.isArray(project.pendingFiles) ? project.pendingFiles : [];
+    const staleFiles = Array.isArray(project.staleFiles) ? project.staleFiles : [];
+    if(tooltip) {
+      const data = DATA || {};
+      const timestamp = data.timestamp ? new Date(data.timestamp).toLocaleString("en-GB") : "-";
+      tooltip.textContent = [
+        `${ready ? "●" : "⚠"} Project status: ${ready ? "Ready" : "Needs attention"}`,
+        `Reason: ${reason}`,
+        `📄 Logical documents: ${Number(project.docs) || 0}`,
+        `🖼 Imported images: ${images}`,
+        `🧾 Metadata files: ${Number(project.metadata) || 0}`,
+        `👥 Persons: ${Number(project.persons) || 0}`,
+        `🔗 Relations: ${Number(project.relations) || 0}`,
+        `🏠 Properties: ${Number(project.properties) || MODEL?.properties?.length || 0}`,
+        `Files: map=${project.hasMap ? "yes" : "no"}, glossary=${project.hasGlossary ? "yes" : "no"}, consolidated=${project.hasData ? "yes" : "no"}`,
+        pendingFiles.length ? `Pending images: ${pendingFiles.join(", ")}` : "Pending images: none",
+        staleFiles.length ? `Stale metadata: ${staleFiles.join(", ")}` : "Stale metadata: none",
+        `📅 Updated: ${timestamp}`,
+        `🤖 Model: ${data.model || "-"}`,
+        `📝 ${data.description || "-"}`,
+      ].join("\n");
+    }
+    if(reasons.length === 0) {
+      badge.style.display = "none";
+      badge.textContent = "";
+      badge.title = reason;
+    } else {
+      badge.style.display = "inline-block";
+      badge.style.color = "#fbbf24";
+      badge.textContent = `⚠ ${reason}`;
+      badge.title = reason;
+    }
+  };
+
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[char]);
+
+  const fetchProjects = async () => {
+    const resp = await apiFetch(`/api/projects`);
+    if(!resp.ok) throw new Error("Could not load projects");
+    const data = await resp.json();
+    projectsCache = data.projects || [];
+    updateHeaderProjectStatus(projectsCache.find(project => project.name === LOADED_PROJECT_NAME));
+    return projectsCache;
+  };
+
+  const findProject = (name) => projectsCache.find(project => project.name === name);
+
+  const renderProjectDetails = (project, container) => {
+    if(!container) return;
+    if(!project) {
+      container.innerHTML = "<em>No project selected.</em>";
+      return;
+    }
+    const count = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+    const documents = count(project.docs);
+    const images = count(project.images);
+    const persons = count(project.persons);
+    const relations = count(project.relations);
+    const metadata = count(project.metadata);
+    const pending = project.pendingMetadata == null ? Math.max(0, images - metadata) : count(project.pendingMetadata);
+    const stale = count(project.staleMetadata);
+    const metadataUpdated = project.metadataUpdated == null ? pending === 0 && stale === 0 : Boolean(project.metadataUpdated);
+    const metadataState = images === 0
+      ? '<span style="color:#94a3b8">No imported files</span>'
+      : metadataUpdated
+        ? '<span style="color:#10b981">Metadata up to date</span>'
+        : `<span style="color:#f59e0b">${pending} pending metadata (no JSON yet) · ${stale} stale metadata (source newer than JSON)</span>`;
+    const pendingNames = [
+      ...(Array.isArray(project.pendingFiles) ? project.pendingFiles : []),
+      ...(Array.isArray(project.staleFiles) ? project.staleFiles : []),
+    ];
+    container.innerHTML = `
+      <div style="border-left:3px solid ${metadataUpdated ? '#10b981' : '#f59e0b'};padding-left:9px">
+        <b style="font-size:12px;color:#e2e8f0">${escapeHtml(project.name)}</b>
+        <div style="margin-top:6px;color:#cbd5e1">${documents} documents, ${images} images <span style="color:#64748b">|</span> persons=${persons}, relations=${relations}</div>
+        <div style="margin-top:4px;color:#94a3b8">${metadata} metadata files</div>
+        <div style="margin-top:4px">${metadataState}</div>
+        ${pendingNames.length ? `<div title="${escapeHtml(pendingNames.join(', '))}" style="margin-top:5px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Needs processing: ${escapeHtml(pendingNames.slice(0, 4).join(', '))}${pendingNames.length > 4 ? '…' : ''}</div>` : ''}
+      </div>`;
+  };
+
+  const fillProjectSelect = (select, projects, preferred) => {
+    if(!select) return;
+    select.innerHTML = projects.map(project => `<option value="${escapeHtml(project.name)}">${escapeHtml(project.name)}</option>`).join("");
+    if(projects.some(project => project.name === preferred)) select.value = preferred;
+  };
+
+  // ========== Tab Switching ==========
+  document.querySelectorAll(".settingsTab").forEach(tab => {
+    tab.addEventListener("click", (e) => {
+      const selectedTab = e.currentTarget;
+      const tabName = selectedTab.getAttribute("data-tab");
+      document.querySelectorAll(".settingsTabContent").forEach(t => t.style.display = "none");
+      document.querySelectorAll(".settingsTab").forEach(t => t.style.borderBottom = "2px solid transparent");
+      document.getElementById(`tab-${tabName}`).style.display = "block";
+      selectedTab.style.borderBottom = "2px solid #2563eb";
+      if(tabName === "projects") refreshProjectsList(projectsCache, LOADED_PROJECT_NAME);
+      if(tabName === "import") refreshImportProjectList(projectsCache, LOADED_PROJECT_NAME);
+      if(tabName === "current") refreshCurrentProjectList(projectsCache, LOADED_PROJECT_NAME);
+      if(tabName === "chat") refreshChatProjectList();
+    });
+  });
+
+  const activateProjectSubtab = (name) => {
+    document.querySelectorAll(".projectSubtab").forEach(button => {
+      const active = button.dataset.projectSubtab === name;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    document.querySelectorAll(".projectSubtabContent").forEach(panel => {
+      panel.style.display = panel.dataset.projectPanel === name ? "block" : "none";
+    });
+  };
+  document.querySelectorAll(".projectSubtab").forEach(button => {
+    button.addEventListener("click", () => activateProjectSubtab(button.dataset.projectSubtab));
+  });
+
+  // ========== Projects Management ==========
+  const refreshProjectsList = async (projects = projectsCache, preferred = "") => {
+    try {
+      if(!projects.length) projects = await fetchProjects();
+      const select = document.getElementById("projectSelect");
+      fillProjectSelect(select, projects, preferred || LOADED_PROJECT_NAME || select.value);
+      const container = document.getElementById("projectsListContainer");
+      if(projects.length === 0) {
+        container.innerHTML = "<em>No projects found. Create one below.</em>";
+      } else {
+        renderProjectDetails(findProject(select.value), container);
+      }
+    } catch(e) {
+      document.getElementById("projectsListContainer").innerHTML = `<span style="color:#ef4444">Error: ${e.message}</span>`;
+    }
+  };
+  document.getElementById("projectSelect").addEventListener("change", event => {
+    renderProjectDetails(findProject(event.target.value), document.getElementById("projectsListContainer"));
+  });
+
+  document.getElementById("btnSwitchProject").onclick = async () => {
+    const name = document.getElementById("projectSelect").value;
+    if(!name) { alert("Select a project"); return; }
+    const previousProject = LOADED_PROJECT_NAME;
+    try {
+      const resp = await apiFetch(`/api/projects/${name}/data`);
+      if(!resp.ok) throw new Error("Project has no data");
+      const data = await resp.json();
+      LOADED_PROJECT_NAME = name;
+      await reloadData(data);
+      updateHeaderProjectStatus(findProject(name));
+      modal.style.display = "none";
+    } catch(e) {
+      LOADED_PROJECT_NAME = previousProject;
+      alert("Error: " + e.message);
+    }
+  };
+
+  document.getElementById("btnDeleteProject").onclick = async () => {
+    const name = document.getElementById("projectSelect").value;
+    if(!name) { alert("Select a project"); return; }
+    const confirmed = confirm(`Delete project "${name}"?\n\nThis permanently deletes the entire project folder and all of its contents. This action cannot be undone.`);
+    if(!confirmed) return;
+    try {
+      const resp = await apiFetch(`/api/projects/${encodeURIComponent(name)}`, {method: "DELETE"});
+      const data = await resp.json();
+      if(!resp.ok) throw new Error(data.error || "Project deletion failed");
+      const projects = await fetchProjects();
+      const nextProject = projects[0]?.name || "";
+      if(name === LOADED_PROJECT_NAME) {
+        if(nextProject) window.location.search = `?project=${encodeURIComponent(nextProject)}`;
+        else window.location.reload();
+        return;
+      }
+      await refreshAllProjectControls(projects, nextProject);
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
+  };
+
+  document.getElementById("btnCreateProject").onclick = async () => {
+    const name = document.getElementById("newProjectName").value.trim();
+    const display = document.getElementById("newProjectDisplay").value.trim();
+    if(!name) { alert("Enter a project name"); return; }
+    if(!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(name)) { alert("Invalid project name"); return; }
+    try {
+      const resp = await apiFetch(`/api/projects`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name, displayName: display || name})
+      });
+      if(!resp.ok) throw new Error((await resp.json()).error);
+      document.getElementById("newProjectName").value = "";
+      document.getElementById("newProjectDisplay").value = "";
+      const projects = await fetchProjects();
+      await refreshAllProjectControls(projects, name);
+      activateProjectSubtab("load");
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
+  };
+
+  // ========== File Upload ==========
+  const refreshImportProjectList = async (projects = projectsCache, preferred = "") => {
+    try {
+      if(!projects.length) projects = await fetchProjects();
+      const select = document.getElementById("importProjectSelect");
+      fillProjectSelect(select, projects, preferred || LOADED_PROJECT_NAME || select.value);
+      renderProjectDetails(findProject(select.value), document.getElementById("importProjectDetails"));
+    } catch(e) {
+      console.error("Error:", e);
+    }
+  };
+  document.getElementById("importProjectSelect").addEventListener("change", event => {
+    renderProjectDetails(findProject(event.target.value), document.getElementById("importProjectDetails"));
+  });
+
+  const dropZone = document.getElementById("dropZone");
+  const fileInputMultiple = document.getElementById("fileInputMultiple");
+  dropZone.addEventListener("click", () => fileInputMultiple.click());
+  dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.style.borderColor = "#2563eb"; });
+  dropZone.addEventListener("dragleave", () => { dropZone.style.borderColor = "#475569"; });
+  dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files).filter(f => /\.(jpg|jpeg|png|gif|webp|pdf)$/i.test(f.name));
+    if(files.length > 0) uploadFiles(files);
+  });
+  document.getElementById("btnUploadFiles").onclick = () => fileInputMultiple.click();
+  fileInputMultiple.addEventListener("change", (e) => uploadFiles(Array.from(e.target.files)));
+
+  const uploadFiles = async (files) => {
+    const project = document.getElementById("importProjectSelect").value;
+    if(!project) { alert("Select a project"); return; }
+    const form = new FormData();
+    files.forEach(f => form.append("files", f));
+    try {
+      const resp = await apiFetch(`/api/projects/${project}/upload`, {method: "POST", body: form});
+      const data = await resp.json();
+      if(!resp.ok) throw new Error(data.error || "Upload failed");
+      alert(`✓ ${data.total || 0} files uploaded`);
+      const projects = await fetchProjects();
+      await refreshAllProjectControls(projects, project);
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
+  };
+
+  // ========== Current Project ==========
+  const refreshCurrentProjectList = async (projects = projectsCache, preferred = "") => {
+    try {
+      if(!projects.length) projects = await fetchProjects();
+      const select = document.getElementById("currentProjectSelect");
+      fillProjectSelect(select, projects, preferred || LOADED_PROJECT_NAME || select.value);
+      renderProjectDetails(findProject(select.value), document.getElementById("currentProjectDetails"));
+    } catch(e) {
+      document.getElementById("currentProjectDetails").innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(e.message)}</span>`;
+    }
+  };
+  document.getElementById("currentProjectSelect").addEventListener("change", event => {
+    renderProjectDetails(findProject(event.target.value), document.getElementById("currentProjectDetails"));
+  });
+
+  document.querySelectorAll(".projectAction").forEach(button => {
+    button.addEventListener("click", async () => {
+      const project = document.getElementById("currentProjectSelect").value;
+      const mode = button.dataset.mode;
+      if(!project) { alert("Select a project"); return; }
+      const NO_CONFIRM_MODES = new Set(["validate-docs", "b"]);
+      if(!NO_CONFIRM_MODES.has(mode) && !confirm(`Run Mode ${mode.toUpperCase()} for ${project}?`)) return;
+      const status = document.getElementById("projectActionStatus");
+      document.getElementById("projectActionStatusWrap").style.display = "block";
+      status.textContent = "Processing…";
+      button.disabled = true;
+      try {
+        const resp = await apiFetch(`/api/projects/${project}/process`, {
+          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({mode})
+        });
+        const data = await resp.json();
+        if(!resp.ok) throw new Error([data.error, data.hint, data.output].filter(Boolean).join("\n"));
+        status.textContent = data.output || `Mode ${mode.toUpperCase()} completed.`;
+        const projects = await fetchProjects();
+        await refreshAllProjectControls(projects, project);
+      } catch(e) {
+        status.textContent = e.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll(".projectToolAction").forEach(button => {
+    button.addEventListener("click", async () => {
+      const project = document.getElementById("currentProjectSelect").value;
+      const tool = button.dataset.tool;
+      if(!project) { alert("Select a project"); return; }
+      const status = document.getElementById("projectActionStatus");
+      document.getElementById("projectActionStatusWrap").style.display = "block";
+      status.textContent = "Running report…";
+      button.disabled = true;
+      try {
+        const resp = await apiFetch(`/api/projects/${project}/tools`, {
+          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({tool})
+        });
+        const data = await resp.json();
+        if(!resp.ok) throw new Error(data.error || "Report failed");
+        const resultLabel = data.exitCode === 0 ? "Completed" : `Completed with findings (exit ${data.exitCode})`;
+        status.textContent = `${resultLabel}\n\n${data.output || "No output."}`;
+      } catch(e) {
+        status.textContent = "Error: " + e.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+
+  document.getElementById("btnMaximizeActionStatus").onclick = () => {
+    const content = document.getElementById("projectActionStatus").textContent;
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:4000;display:flex;align-items:center;justify-content:center;padding:20px";
+    overlay.innerHTML = `<div style="background:#0f172a;color:#e2e8f0;width:95%;max-width:1100px;height:90%;border-radius:8px;border:1px solid #334155;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid #334155">
+        <b style="font-size:13px">Report</b>
+        <div style="display:flex;gap:8px">
+          <button id="btnCopyActionStatus" style="padding:6px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">Copy</button>
+          <button id="btnCloseActionStatus" style="padding:6px 12px;background:#475569;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px">Close</button>
+        </div>
+      </div>
+      <pre style="flex:1;margin:0;padding:16px;overflow:auto;white-space:pre-wrap;font-size:12px;line-height:1.6"></pre>
+    </div>`;
+    overlay.querySelector("pre").textContent = content;
+    overlay.querySelector("#btnCopyActionStatus").onclick = () => navigator.clipboard.writeText(content);
+    overlay.querySelector("#btnCloseActionStatus").onclick = () => overlay.remove();
+    overlay.onclick = (event) => { if(event.target === overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
+  };
+
+  const textEditorModal = document.getElementById("textEditorModal");
+  const textEditorPanel = document.getElementById("textEditorPanel");
+  const textEditor = document.getElementById("textEditor");
+  document.querySelectorAll(".projectFileAction").forEach(button => {
+    button.addEventListener("click", async () => {
+      const project = document.getElementById("currentProjectSelect").value;
+      const fileName = button.dataset.file;
+      if(!project) { alert("Select a project"); return; }
+      try {
+        const resp = await apiFetch(`/api/projects/${project}/file/${encodeURIComponent(fileName)}`);
+        const data = await resp.json();
+        if(!resp.ok) throw new Error(data.error || "Could not load project file");
+        textEditor.value = data.content;
+        textEditor.dataset.project = project;
+        textEditor.dataset.file = fileName;
+        document.getElementById("textEditorTitle").textContent = `${project} / ${fileName}`;
+        document.getElementById("textEditorFileName").textContent = fileName;
+        document.getElementById("textEditorSaveStatus").textContent = "";
+        textEditorModal.style.display = "flex";
+      } catch(e) {
+        alert("Error: " + e.message);
+      }
+    });
+  });
+  document.getElementById("btnSaveTextEditor").onclick = async () => {
+    const project = textEditor.dataset.project;
+    const fileName = textEditor.dataset.file;
+    if(!confirm(`Save ${fileName} for ${project}?`)) return;
+    const status = document.getElementById("textEditorSaveStatus");
+    try {
+      const resp = await apiFetch(`/api/projects/${project}/file/${encodeURIComponent(fileName)}`, {
+        method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify({content: textEditor.value})
+      });
+      const data = await resp.json();
+      if(!resp.ok) throw new Error(data.error || "Save failed");
+      status.textContent = `${fileName} saved.`;
+    } catch(e) {
+      status.textContent = "Error: " + e.message;
+    }
+  };
+  document.getElementById("btnCloseTextEditor").onclick = () => textEditorModal.style.display = "none";
+  document.getElementById("btnExpandTextEditor").onclick = () => {
+    const expanded = textEditorPanel.dataset.expanded === "true";
+    textEditorPanel.dataset.expanded = String(!expanded);
+    textEditorPanel.style.width = expanded ? "min(900px,95vw)" : "calc(100vw - 20px)";
+    textEditorPanel.style.height = expanded ? "min(680px,85vh)" : "calc(100vh - 20px)";
+  };
+  textEditorModal.addEventListener("click", event => {
+    if(event.target === textEditorModal) textEditorModal.style.display = "none";
+  });
+
+  // ========== Agent Chat ==========
+  const refreshChatProjectList = async (projects = projectsCache) => {
+    try {
+      if(!projects.length) projects = await fetchProjects();
+      const select = document.getElementById("chatProjectSelect");
+      const available = projects.filter(project => project.hasData);
+      fillProjectSelect(select, available, select.value || PROJECT_NAME);
+      renderProjectDetails(findProject(select.value), document.getElementById("chatProjectDetails"));
+    } catch(e) {
+      console.error("Error:", e);
+    }
+  };
+  document.getElementById("chatProjectSelect").addEventListener("change", event => {
+    renderProjectDetails(findProject(event.target.value), document.getElementById("chatProjectDetails"));
+  });
+
+  const refreshAllProjectControls = async (projects, preferred = LOADED_PROJECT_NAME) => {
+    await Promise.all([
+      refreshProjectsList(projects, preferred),
+      refreshImportProjectList(projects, preferred),
+      refreshCurrentProjectList(projects, preferred),
+      refreshChatProjectList(projects),
+    ]);
+  };
+
+  document.getElementById("btnSendQuery").onclick = async () => {
+    const project = document.getElementById("chatProjectSelect").value;
+    const question = document.getElementById("chatQuestion").value.trim();
+    if(!project || !question) { alert("Select a project and enter a question"); return; }
+    try {
+      const resp = await apiFetch(`/api/agent/query`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({project, question})});
+      const data = await resp.json();
+      document.getElementById("chatResponseContainer").style.display = "block";
+      document.getElementById("chatResponse").textContent = data.answer;
+      const hitsHtml = (data.hits || []).map(h => `<div style="margin-bottom:8px;padding:8px;background:#1e293b;border-radius:4px;cursor:pointer" onclick="window.location.hash='${h.link}'" title="Click to open"><span style="background:#2563eb;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;margin-right:6px">${h.kind.toUpperCase()}</span><b>${h.label}</b>${h.detail ? `<br><span style="font-size:10px;color:#94a3b8">${h.detail}</span>` : ""}</div>`).join("");
+      document.getElementById("chatHits").innerHTML = hitsHtml || "<em>No results</em>";
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
+  };
+
+  // ========== Data Source Tab ==========
+  const currentSource = document.getElementById("currentSource");
   const urlInput = document.getElementById("urlInput");
   const fileInput = document.getElementById("fileInput");
-  const currentSource = document.getElementById("currentSource");
+  const btnLoadUrl = document.getElementById("btnLoadUrl");
+  const btnLoadFile = document.getElementById("btnLoadFile");
 
-  if(!modal) return; // skip se modal não existe
-
-  // Header settings button opens the modal
-  const headerSettings = document.getElementById("headerSettings");
-  if(headerSettings) {
-    headerSettings.onclick = () => {
-      modal.style.display = "flex";
-      modal.style.alignItems = "center";
-      modal.style.justifyContent = "center";
-      modal.style.flexDirection = "column";
-      currentSource.textContent = CURRENT_SOURCE;
+  if(btnLoadUrl) {
+    btnLoadUrl.textContent = CONFIG.ui_strings?.load_modal?.load_url_button || "Load URL";
+    btnLoadUrl.onclick = async () => {
+      if(!urlInput.value.trim()) { alert("Enter a URL"); return; }
+      const data = await loadFromUrl(urlInput.value.trim());
+      if(data) await reloadData(data);
+    };
+  }
+  if(btnLoadFile) {
+    btnLoadFile.textContent = CONFIG.ui_strings?.load_modal?.import_file_button || "Load File";
+    btnLoadFile.onclick = async () => {
+      if(!fileInput.files[0]) { alert("Select a file"); return; }
+      const data = await loadFromFile(fileInput.files[0]);
+      if(data) await reloadData(data);
     };
   }
 
-  btnCloseSource.onclick = () => {
-    modal.style.display = "none";
-  };
+  const headerSettings = document.getElementById("headerSettings");
+  if(headerSettings) {
+    headerSettings.onclick = async () => {
+      modal.style.display = "flex";
+      if(currentSource) currentSource.textContent = CURRENT_SOURCE;
+      try {
+        const projects = await fetchProjects();
+        await refreshAllProjectControls(projects, LOADED_PROJECT_NAME);
+      } catch(e) {
+        document.getElementById("projectsListContainer").innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(e.message)}</span>`;
+      }
+    };
+  }
 
-  btnLoadUrl.onclick = async () => {
-    if(!urlInput.value.trim()) { alert("Introduz uma URL válida"); return; }
-    const data = await loadFromUrl(urlInput.value.trim());
-    if(data) await reloadData(data);
-  };
+  const btnCloseSource = document.getElementById("btnCloseSource");
+  if(btnCloseSource) {
+    btnCloseSource.onclick = () => modal.style.display = "none";
+  }
 
-  btnLoadFile.onclick = async () => {
-    if(!fileInput.files[0]) { alert("Seleciona um ficheiro"); return; }
-    const data = await loadFromFile(fileInput.files[0]);
-    if(data) await reloadData(data);
-  };
-
+  // Only close on a genuine click on the backdrop, not a drag/selection that ends outside the modal content.
+  let sourceModalMouseDownOnBackdrop = false;
+  modal.addEventListener("mousedown", (e) => { sourceModalMouseDownOnBackdrop = e.target === modal; });
   modal.onclick = (e) => {
-    if(e.target === modal) modal.style.display = "none";
+    if(e.target === modal && sourceModalMouseDownOnBackdrop) modal.style.display = "none";
   };
+
+  fetchProjects().catch(() => updateHeaderProjectStatus(null));
 };
 
 // Chamar após DOM estar pronto

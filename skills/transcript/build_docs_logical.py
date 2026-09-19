@@ -403,9 +403,14 @@ def build():
             for alias in grp[1:]:
                 ALIAS[_norm(alias)] = canon
     mp = json.load(open(MAP_PATH, encoding="utf-8"))
-    ARCHIVE_NAME = mp.get("name", "Cótimos")
+    ARCHIVE_NAME = mp.get("name") or mp.get("project") or project_name
     ARCHIVE_DESC = mp.get("description", "Genealogical and notarial archive")
-    DOCS = mp["documents"]
+    DOCS = mp.get("logical_documents")
+    if not isinstance(DOCS, list):
+        raise ValueError(
+            f"{MAP_PATH} must contain a 'logical_documents' array "
+            "(see skills/transcript/SCHEMA.md)"
+        )
 
     docs_out = []
     gen_all_p, gen_all_r = [], []   # global genealogy contributions

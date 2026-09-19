@@ -161,7 +161,7 @@ def main():
     
     project_path = sys.argv[1]
     
-    print(f"Loading docs_logical.json from {project_path}...")
+    print(f"Loading docs_logical.json ...")
     data = load_docs_logical(project_path)
     print(f"✓ Loaded")
     

@@ -2,9 +2,9 @@
 
 > **Extract, transcribe, and structure genealogical and notarial records from historical manuscripts using GenAI with paleographic accuracy.**
 
-**Current Version:** 2.0 (Project-centric architecture)  
-**Status:** ✅ Production-ready for multi-project archive management  
-**Language:** 🇬🇧 English (all documentation, code, and UI)  
+**Current Version:** 2.0 (Project-centric architecture)
+**Status:** Active development with multi-project support
+**Language:** English UI/API; archival examples preserve source-language text
 
 ---
 
@@ -26,17 +26,55 @@ NotaryMindAI is a modular system for digitizing and structuring historical docum
 
 ---
 
-## 🏗️ Architecture: Project-Centric + Agnostic Tools
+## 🏗️ Architecture: Monorepo (API + UI + Data)
 
-The system separates **project-specific data** from **reusable tools**, enabling you to manage multiple archives with one codebase.
+The system is organized as a **monorepo** with clear separation of concerns:
 
 ### Directory Structure
 
 ```
-NotaryMindAi/
+NotaryMindAi/  (monorepo root)
 │
-├── README.md                        (this file)
-├── SKILL.md                         (GenAI workflows & prompts)
+├── skills/transcript/
+│   ├── GLOSSARY-TEMPLATE.md       New-project glossary source with inert real examples
+│   ├── GENDER-RULES-TEMPLATE.json New-project gender inference keywords
+│
+├── api/                           ← BACKEND (Python Flask)
+│   ├── server.py                  REST API server
+│   ├── requirements.txt            Dependencies
+│   └── README.md                  API docs
+│
+├── ui/                            ← FRONTEND (HTML/JavaScript)
+│   ├── main.html                  Main UI + 4 tabs
+│   ├── schema.json                Configuration
+│   └── SKILL.md                   UI documentation
+│
+├── projects/                      ← DATA (Genealogical archives)
+│   └── {project-name}/            Example: cotimos/
+│       ├── imported/              Raw images
+│       ├── metadata/              Per-image OCR JSON
+│       ├── GLOSSARIO.md           Corrections, identities, and local knowledge
+│       ├── gender_rules.json       Project-specific gender inference keywords
+│       ├── docs_logical.json      Consolidated data
+│       └── docs_logical_map.json
+│
+├── skills/                        ← TOOLS (GenAI pipeline)
+│   └── transcript/
+│       ├── build_docs_logical.py
+│       ├── find_new_docs.ts
+│       └── validate_map.py
+│
+└── README.md                      (this file)
+```
+
+### Component Roles
+
+| Component | Technology | Role | Files |
+|-----------|-----------|------|-------|
+| **API** | Python Flask | REST endpoints, file serving, agent queries | `api/server.py` |
+| **UI** | HTML/JavaScript | 4-tab interface, project management, chat | `ui/main.html` |
+| **Data** | JSON + Filesystem | Genealogical archives, project metadata | `projects/` |
+| **Tools** | Python/TypeScript | GenAI pipeline, build, validation | `skills/` |
 │
 ├── projects/                        🔑 PROJECT-SPECIFIC CONTENT
 │   └── <project-name>/              Example: any genealogical archive
@@ -72,81 +110,63 @@ NotaryMindAi/
 
 ---
 
-## 🚀 Quick Start: Process Your First Archive
+## 🚀 Quick Start: API Server
 
-### 1. Create a Project
-
-```bash
-mkdir -p projects/my-archive/{imported,metadata}
-
-cat > projects/my-archive/docs_logical_map.json << 'EOF'
-{
-  "name": "My Archive",
-  "description": "Description here",
-  "documentos": []
-}
-EOF
-```
-
-### 2. Add Images
+### 1. Install Dependencies
 
 ```bash
-cp ~/my-scans/*.jpg projects/my-archive/imported/
+sudo apt-get install python3-flask python3-flask-cors
+# or:
+cd api && pip install -r requirements.txt
 ```
 
-### 3. List Pending Work
+### 2. Start API Server
 
+**From project root:**
 ```bash
-bun skills/transcript/find_new_docs.ts projects/my-archive
-# Output: which images need OCR transcription
+python3 api/server.py
+# Output: NotaryMindAi API on http://localhost:8787
 ```
 
-### 4. Process Images (GenAI)
-
-For each pending raw image or pdf:
-- Use Claude Opus 4.8 (required for accuracy)
-- Apply prompts from `skills/transcript/SKILL.md`
-- Save result to `projects/my-archive/metadata/<image-name>.json`
-- Folow schema rules
- - Use `projects/my-archive/GLOSSARIO.md` to guide GenAI
-
-### 5. Update Document Map
-
-Edit `projects/my-archive/docs_logical_map.json`:
-- Group metadata files into logical documents
-- Define titles and types
-- Add transaction info (buyers, sellers, values)
-- Follow schema rules
-- Use `projects/my-archive/GLOSSARIO.md` to guide GenAI
- 
-### 6. Build Consolidated Output
-
+**From api/ directory:**
 ```bash
-python3 skills/transcript/build_docs_logical.py projects/my-archive
-# Generates: projects/my-archive/docs_logical.json
+cd api
+python3 server.py
 ```
 
-### 7. Validate
-
+**Custom port:**
 ```bash
-python3 skills/transcript/validate_map.py projects/my-archive
-# Checks for errors, inconsistencies
+PORT=9000 python3 api/server.py
 ```
 
-### 8. View Results
+### 3. Open Browser
 
-```bash
-cd NotaryMindAi
-python3 -m http.server 8000
-# Open: http://localhost:8000/ui/main.html?project=my-archive
-```
+http://localhost:8787/
 
----
+### 4. Use the Settings Menu
+
+| Tab | Action |
+|-----|--------|
+| **🗂️ Project** | Load, create, or delete projects; load external JSON from a URL or file |
+| **📥 Import Files** | Upload images/PDFs and review pending or stale metadata status |
+| **🛠️ Build Metadata** | Run A1, A2, B, or C and edit `GLOSSARIO.md` |
+| **💬 Project Chat** | Query consolidated project data (read-only) |
+
+All project selectors default to the project currently loaded in the viewer. On narrow
+screens, the outer tabs collapse to accessible icons.
+
+The header shows person/relation/property counts. Ready status stays hidden; incomplete
+projects show an amber warning with the reason. The Statistics popup contains full
+project readiness, image/metadata counts, file presence, and pending/stale filenames.
 
 ## ⚡ Quick Commands
 
 ```bash
-# Build a project
+# Start API server (recommended for full features)
+python3 api/server.py
+# Browse UI: http://localhost:8787
+
+# Build a project (GenAI pipeline)
 python3 skills/transcript/build_docs_logical.py projects/<project>
 
 # Check for pending images
@@ -155,7 +175,7 @@ bun skills/transcript/find_new_docs.ts projects/<project>
 # Validate project
 python3 skills/transcript/validate_map.py projects/<project>
 
-# View results
+# View results (static server, no API)
 python3 -m http.server 8000
 # Open: http://localhost:8000/ui/main.html?project=<project>
 ```
@@ -469,12 +489,14 @@ The build script automatically infers missing gender for persons based on geneal
    {
      "gender_inference": {
        "keywords": {
-         "female": ["filha", "mãe", "mulher", "esposa", ...],
-         "male": ["filho", "pai", "marido", "esposo", ...]
+         "female": ["filha", "mãe", "mulher", "esposa", "daughter", "mother", "wife", "sister", ...],
+         "male": ["filho", "pai", "marido", "esposo", "son", "father", "husband", "brother", ...]
        }
      }
    }
    ```
+
+   **Template source:** New projects are created with a copy of `skills/transcript/GENDER-RULES-TEMPLATE.json` (Portuguese + English keywords)
 
 2. **Build time:** Script scans genealogical relations and person roles
 3. **Output:** Gender + source tracked in `person.gender` and `person.gender_source`
@@ -484,9 +506,323 @@ The build script automatically infers missing gender for persons based on geneal
 
 To modify gender inference for your project:
 
-- Edit `projects/{project}/gender_rules.json`
+- Edit `projects/{project}/gender_rules.json` (or use Build Metadata → "⚧ Edit Gender Rules")
 - Add/remove keywords for your language
 - Rebuild with `python3 build_docs_logical.py {project_path}`
 
 See **[SCHEMA.md](SCHEMA.md)** for full data model and gender inference details.
 
+---
+
+## 🌐 API Reference: Server (`api/server.py`)
+
+The `api/server.py` provides a REST API for programmatic access to projects, file uploads, and agent queries. All endpoints return JSON and support CORS.
+
+### Installation & Running
+
+```bash
+# Install dependencies
+sudo apt-get install python3-flask python3-flask-cors
+# or: cd api && pip install -r requirements.txt
+
+# Start server (default port 8787)
+python3 api/server.py
+# or from api/ directory: python3 server.py
+
+# Custom port
+PORT=9000 python3 api/server.py
+
+# Behind a reverse proxy (nginx, etc.)
+PORT=5000 python3 api/server.py  # then proxy http://localhost:5000 → public URL
+```
+
+### Endpoints
+
+#### Projects Management
+
+**List all projects**
+```
+GET /api/projects
+Response: { "projects": [{"name": "cotimos", "hasData": true, "images": 59,
+  "metadata": 59, "pendingMetadata": 0, "staleMetadata": 0,
+  "metadataUpdated": true, "docs": 23, "persons": 45, "relations": 93}, ...] }
+```
+
+**Create a new project**
+```
+POST /api/projects
+Body: {"name": "my-archive", "displayName": "My Archive"}
+Response: {"ok": true, "name": "my-archive"}
+```
+
+New projects include `imported/`, `metadata/`, `docs_logical_map.json`,
+`docs_logical.json`, `gender_rules.json`, and a ready-to-edit `GLOSSARIO.md` modeled on
+the real Cótimos project: reading corrections, structured local genealogy, and project
+notes. Its identity, person, and relation arrays start empty until facts are verified.
+The API creates that file from [`skills/transcript/GLOSSARY-TEMPLATE.md`](skills/transcript/GLOSSARY-TEMPLATE.md),
+replacing only the project label, directory name, and creation timestamp. The generated
+project `GLOSSARIO.md` is then shared by deterministic builds and A1/A2/C GenAI context.
+`docs_logical_map.json` uses `logical_documents` as its only top-level document
+collection. The generated `docs_logical.json` output separately uses `documents`.
+
+**Delete a project and all contents**
+```
+DELETE /api/projects/{name}
+Response: {"ok": true, "name": "my-archive"}
+```
+
+The UI requires an explicit irreversible confirmation before calling this endpoint.
+
+**Get project processing status**
+```
+GET /api/projects/{name}/details
+Response: project counts plus pending/stale metadata filenames
+```
+
+#### File Operations
+
+**Upload files to a project (drag-and-drop)**
+```
+POST /api/projects/{name}/upload
+Multipart form with field: files (multiple files)
+Supported: .jpg, .jpeg, .png, .gif, .webp, .pdf
+Response: {"ok": true, "saved": ["page_1.jpg", ...], "skipped": ["doc.txt"], "total": 1}
+```
+
+**Get project data**
+```
+GET /api/projects/{name}/data
+Response: docs_logical.json (full project data)
+```
+
+**Read raw file from project**
+```
+GET /api/projects/{name}/raw?path=metadata/page_0001.json
+Response: file content (JSON, image, etc.)
+```
+
+**Read or save the project glossary**
+```
+GET /api/projects/{name}/glossary
+PUT /api/projects/{name}/glossary
+Body for PUT: {"content": "# Glossary of Corrections ..."}
+```
+
+**Edit project files (generic file endpoint)**
+```
+GET /api/projects/{name}/file/{file_name}
+PUT /api/projects/{name}/file/{file_name}
+
+Supported files: GLOSSARIO.md, docs_logical_map.json, docs_logical.json, gender_rules.json
+
+GET response: {"content": "..."}
+PUT body: {"content": "..."} — JSON files are validated before saving
+PUT response: {"ok": true} or {"error": "..."}
+```
+
+**Run a processing mode**
+```
+POST /api/projects/{name}/process
+Body: {"mode": "a1|a2|b|c"}
+```
+
+Mode B runs the deterministic build and validation locally. Modes A1, A2, and C use
+the executable configured by `NOTARYMIND_GENAI_RUNNER`; it receives
+`<mode> <project_path> github-copilot/claude-opus-4.8`.
+
+**Run a read-only quality report**
+```
+POST /api/projects/{name}/tools
+Body: {"tool": "audit-inference|validate-map|validate-variants"}
+Response: {"ok": true, "exitCode": 0, "output": "..."}
+```
+
+Validator findings may produce a nonzero `exitCode`; the endpoint still returns the
+captured report so the Build Metadata output panel can display it.
+
+#### Query-Only Agent
+
+**Search genealogical data**
+```
+POST /api/agent/query
+Body: {"project": "cotimos", "question": "Bernardo Dias"}
+Response: {
+  "answer": "Found 3 person(s), 10 relation(s), 7 document(s) for 'Bernardo Dias'...",
+  "hits": [
+    {"kind": "person", "id": "P:bernardo dias", "label": "Bernardo Dias",
+     "detail": "Male · born 1894-01-01 · property owner",
+     "link": "#person=P%3Abernardo%20dias"},
+    {"kind": "relation", "id": "Bernardo Dias→António Maria",
+     "label": "Bernardo Dias filho de António Maria",
+     "link": "#person=P%3Abernardo%20dias"},
+    {"kind": "document", "id": "DL:DOC-0042",
+     "label": "Carta de Foro - 1872",
+     "detail": "Notarial Deed · 1872-03-15",
+     "link": "#doc=DL%3ADOC-0042"}
+  ],
+  "project": "cotimos",
+  "readonly": true
+}
+```
+
+Agent queries are **query-only**: they cannot write, modify, or create files. Results are UI-friendly links you can pass to the JavaScript UI to navigate.
+
+#### Static Files
+
+**UI main page**
+```
+GET /
+Response: main.html (served as text/html)
+```
+
+**UI assets**
+```
+GET /ui/{path}
+Serves: schema.json, main.html, styles, etc.
+```
+
+**Project files**
+```
+GET /projects/{name}/imported/page_0001.jpg
+GET /projects/{name}/metadata/page_0001.json
+Serves: images, metadata files from project directories
+```
+
+### Usage Examples
+
+**JavaScript (browser)**
+```javascript
+// List projects
+const resp = await fetch('/api/projects');
+const {projects} = await resp.json();
+
+// Create project
+await fetch('/api/projects', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({name: 'new-archive', displayName: 'New Archive'})
+});
+
+// Upload files
+const form = new FormData();
+form.append('files', file1);
+form.append('files', file2);
+await fetch('/api/projects/new-archive/upload', {method: 'POST', body: form});
+
+// Query agent
+const resp = await fetch('/api/agent/query', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({project: 'cotimos', question: 'Bernardo Dias'})
+});
+const {answer, hits} = await resp.json();
+console.log(answer);
+hits.forEach(h => console.log(`  - ${h.kind}: ${h.label} → ${h.link}`));
+```
+
+**cURL**
+```bash
+# List projects
+curl http://localhost:8787/api/projects
+
+# Create project
+curl -X POST http://localhost:8787/api/projects \
+  -H 'Content-Type: application/json' \
+  -d '{"name": "test", "displayName": "Test"}'
+
+# Query agent
+curl -X POST http://localhost:8787/api/agent/query \
+  -H 'Content-Type: application/json' \
+  -d '{"project": "cotimos", "question": "Bernardo"}'
+```
+
+**Python**
+```python
+import requests
+
+# Query agent
+resp = requests.post('http://localhost:8787/api/agent/query', json={
+    'project': 'cotimos',
+    'question': 'Bernardo Dias'
+})
+data = resp.json()
+print(data['answer'])
+for hit in data['hits']:
+    print(f"  - {hit['kind']}: {hit['label']} → {hit['link']}")
+```
+
+### Query Syntax
+
+Agent queries use **term-based search** (case-insensitive, diacritics-ignored):
+
+- **"Bernardo Dias"** → search for `bernardo` AND `dias` across all persons, relations, documents
+- **"fidalgo"** → search role/entity keywords
+- **"1872"** → search document dates and event years
+- **"filha de"** → search relation types
+
+Top 25 results are returned sorted by relevance score.
+
+---
+
+
+---
+
+## 📈 Roadmap
+
+### v2.0 (Current) ✅
+- ✅ Multi-project support
+- ✅ Drag-drop file import
+- ✅ Query-only agent
+- ✅ Monorepo structure
+- ✅ GenAI integration (API, UI, Transcription)
+- ✅ Automated testing
+
+### v2.1 (Next)
+- [ ] API documentation (OpenAPI/Swagger)
+- [ ] Unit tests (pytest)
+- [ ] Performance optimization
+- [ ] Agent enrichment (historical names, aliases)
+
+### v2.2 (Medium-term)
+- [ ] Docker + docker-compose
+- [ ] CI/CD pipeline (GitHub Actions)
+- [ ] Database backend (PostgreSQL optional)
+- [ ] Advanced search (full-text, filters)
+
+### v3.0 (Long-term)
+- [ ] Separate repos (api, ui, data)
+- [ ] Independent versioning
+- [ ] Microservices (optional)
+- [ ] Web-scale deployment (Kubernetes)
+
+---
+
+## 📚 Documentation
+
+**Core Documentation:**
+- `README.md` (this file) — Overview, quick start, roadmap
+- `SCHEMA.md` — Data model reference (v2.0)
+- `SKILL.md` — GenAI project planning
+
+**Component Documentation:**
+- `api/README.md` — API server setup and testing
+- `api/SKILL.md` — GenAI prompts for API development
+- `ui/SKILL.md` — GenAI prompts for UI enhancement
+- `skills/transcript/SKILL.md` — GenAI for document transcription
+
+**For Developers:**
+- See `api/SKILL.md` for API development patterns
+- See `api/test_api.sh` for testing workflow
+- See `api/README.md` for running the server
+
+---
+
+## 🔐 License
+
+[Add license info as needed]
+
+---
+
+**Status:** Active development
+**Last Updated:** September 18, 2026
+**Maintained By:** NotaryMindAi Team

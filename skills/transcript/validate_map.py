@@ -43,6 +43,11 @@ def load_data():
     """Loads map.json and image JSONs"""
     with open(MAP_PATH) as f:
         map_data = json.load(f)
+    if not isinstance(map_data.get("logical_documents"), list):
+        raise ValueError(
+            f"{MAP_PATH} must contain a 'logical_documents' array "
+            "(see skills/transcript/SCHEMA.md)"
+        )
     
     images = {}
     for p in IMG_DIR.glob("*.json"):
@@ -63,7 +68,7 @@ def check_transaction_relations(map_data, images):
     def norm(s):
         return " ".join((s or "").lower().split())
 
-    for doc in map_data.get("documents", []):
+    for doc in map_data.get("logical_documents", []):
         doc_id = doc.get("id")
         tx = doc.get("transaction") or {}
         if not tx or not (tx.get("seller") or tx.get("buyer")):
@@ -99,8 +104,8 @@ def check_transaction_relations(map_data, images):
                     issues.append({
                         "doc_id": doc_id,
                         "tipo": "tx_relation_orphan",
-                        "msg": (f"relação '{r.get('de')} {r.get('relacao')} {r.get('para')}' "
-                                f"tem extremo '{r.get(lado)}' que não existe em genealogia.pessoas"),
+                        "msg": (f"relation '{r.get('de')} {r.get('relacao')} {r.get('para')}' "
+                            f"has endpoint '{r.get(lado)}' missing from genealogy persons"),
                     })
 
     return issues
@@ -109,7 +114,7 @@ def check_procurators(map_data, images):
     """Verifica se procuradores batem entre map.json e OCR observações"""
     issues = []
     
-    for doc in map_data.get("documents", []):
+    for doc in map_data.get("logical_documents", []):
         doc_id = doc.get("id")
         tx = doc.get("transaction") or {}
         
@@ -142,7 +147,7 @@ def check_procurators(map_data, images):
                     issues.append({
                         "doc_id": doc_id,
                         "tipo": "procurator_mismatch",
-                        "msg": f"Procurador diferente: map='{proc_map}' vs obs='{proc_obs}'",
+                        "msg": f"Procurator mismatch: map='{proc_map}' vs OCR='{proc_obs}'",
                         "procurador_map": proc_map,
                         "procurador_obs": proc_obs
                     })
@@ -153,7 +158,7 @@ def check_genealogy_roles(map_data, images):
     """Verifica se papéis genealógicos batem com transação"""
     issues = []
     
-    for doc in map_data.get("documents", []):
+    for doc in map_data.get("logical_documents", []):
         doc_id = doc.get("id")
         tx = doc.get("transaction") or {}
         
@@ -173,7 +178,7 @@ def check_genealogy_roles(map_data, images):
                     issues.append({
                         "doc_id": doc_id,
                         "tipo": "genealogy_role_mismatch",
-                        "msg": f"'{nome}' marcado como 'buyer' na genealogia mas está em vendedor no mapa",
+                        "msg": f"'{nome}' is marked as buyer in genealogy but is a seller in the map",
                         "pessoa": nome,
                         "papel_gen": papel,
                         "localizacao": img
@@ -184,7 +189,7 @@ def check_genealogy_roles(map_data, images):
 def print_issues(all_issues):
     """Formata e imprime issues"""
     if not all_issues:
-        print("\n✅ Nenhum erro detectado na validação de transações")
+        print("\n✅ No transaction validation errors detected")
         return False
     
     print(f"\n❌ Found {len(all_issues)} error(s):\n")
@@ -201,13 +206,13 @@ def print_issues(all_issues):
     return True
 
 def main():
-    print("\n🔍 Validation de documentos_logicos.map.json — Mode C")
+    print("\n🔍 Validating docs_logical_map.json ...")
     print("=" * 70)
     
     try:
         map_data, images = load_data()
-    except FileNotFoundError as e:
-        print(f"❌ Erro ao carregar dados: {e}")
+    except (FileNotFoundError, ValueError, json.JSONDecodeError) as e:
+        print(f"❌ Error loading data: {e}")
         return 1
     
     # Executar verificações

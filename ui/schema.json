@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0",
   "ui_version": "2.0",
-  "name": "NotaryMind AI — Explorador de Certidões, Relações e Propriedades",
+  "name": "NotaryMind AI — Certificates, Relations and Properties Explorer",
   "description": "Web UI for genealogical & notarial document archives",
   "last_updated": "2026-09-14T01:31:00Z",
   "relations": {
@@ -329,9 +329,9 @@
     "viewport_padding": 40
   },
   "hints": {
-    "genealogy": "Arraste os nós (snap por geração) · roda=zoom · botão do meio/fundo=pan · clique=detalhes · tracejado curto=glossário",
-    "properties": "Vermelho = purchase/sale · clique numa aresta=relação/documento · roda=zoom · botão do meio/fundo=pan",
-    "documents": "Documentos ↔ properties/pessoas (verde=buyer, vermelho=seller, azul=aparece) · clique numa aresta/nó"
+    "genealogy": "Drag nodes (snap by generation) · wheel=zoom · middle button/background=pan · click=details · short dash=glossary",
+    "properties": "Red = purchase/sale · click an edge=relation/document · wheel=zoom · middle button/background=pan",
+    "documents": "Documents ↔ properties/people (green=buyer, red=seller, blue=appears) · click an edge/node"
   },
   "filters": {
     "genealogy_default_hidden": [
@@ -341,17 +341,17 @@
     ],
     "doc_view": {
       "sale": {
-        "label": "Vendas",
+        "label": "Sales",
         "label_pt": "Vendas",
         "color": "#dc2626"
       },
       "aparece": {
-        "label": "Pessoas",
+        "label": "People",
         "label_pt": "Pessoas",
         "color": "#3b82f6"
       },
       "propriedade": {
-        "label": "Propriedade",
+        "label": "Property",
         "label_pt": "Propriedade",
         "color": "#94a3b8"
       }
@@ -368,60 +368,60 @@
       "zoom_out": "- Zoom",
       "reset": "↺ Reset",
       "download": "Download ⭳",
-      "close": "Fechar ✕",
-      "previous": "◀ Anterior",
-      "next": "Próxima ▶",
-      "copy": "Copiar",
-      "copy_all": "Copiar Tudo",
-      "expand": "Expandir"
+      "close": "Close ✕",
+      "previous": "◀ Previous",
+      "next": "Next ▶",
+      "copy": "Copy",
+      "copy_all": "Copy All",
+      "expand": "Expand"
     },
     "status": {
-      "loading": "Carregando...",
-      "copied": "✓ Copiado!",
+      "loading": "Loading...",
+      "copied": "✓ Copied!",
       "error_loading": "Error loading JSON.",
       "error_processing": "Error processing data",
-      "no_transcription": "Sem transcrição"
+      "no_transcription": "No transcription"
     },
     "labels": {
-      "transcription": "📝 Transcrição",
-      "ocr_summary": "📄 Resumo OCR",
-      "file_listing": "📄 Listagem de Ficheiros",
-      "documents": "Documentos onde aparece",
+      "transcription": "📝 Transcription",
+      "ocr_summary": "📄 OCR Summary",
+      "file_listing": "📄 File List",
+      "documents": "Documents containing this item",
       "navigation": "Navigation"
     },
     "titles": {
-      "archive_info": "clica para info",
-      "settings": "Configurações",
-      "fit_zoom": "Ajustar Zoom"
+      "archive_info": "Click for information",
+      "settings": "Settings",
+      "fit_zoom": "Fit to view"
     },
     "hints": {
       "drag_nodes": "Drag nodes · click for details/drilldown",
       "navigation": "Navigation"
     },
     "placeholders": {
-      "json_url": "ex: http://localhost:8000/documentos_logicos.json",
+      "json_url": "ex: http://localhost:8000/docs_logical.json",
       "search": "Search..."
     },
     "modal_actions": {
-      "load_url": "Carregar de URL",
-      "import_file": "Importar ficheiro",
-      "close": "Fechar",
-      "close_source": "Fechar"
+      "load_url": "Load from URL",
+      "import_file": "Load file",
+      "close": "Close",
+      "close_source": "Close"
     },
     "modal_labels": {
-      "current_source": "Fonte Atual",
-      "load_from_url": "📥 Carregar de URL:",
-      "import_json": "📂 Importar ficheiro JSON:"
+      "current_source": "Current Source",
+      "load_from_url": "📥 Load from URL:",
+      "import_json": "📂 Load JSON file:"
     },
     "view_buttons": {
       "genealogy": "Genealogy",
       "properties": "Properties",
       "documents": "Documents",
-      "clear_focus": "Limpar foco"
+      "clear_focus": "Clear focus"
     },
     "image_actions": {
-      "view_image": "Ver imagem",
-      "view_json": "Ver JSON",
+      "view_image": "View image",
+      "view_json": "View JSON",
       "toggle_transcription": "Toggle Transcription"
     },
     "nav_buttons": {
@@ -430,28 +430,28 @@
       "documents": "Documents"
     },
     "modal_titles": {
-      "archive_info": "clica para info",
-      "settings": "Configurações"
+      "archive_info": "Click for information",
+      "settings": "Settings"
     },
     "load_modal": {
-      "load_url_label": "📥 Carregar de URL:",
-      "load_url_button": "Carregar de URL",
-      "import_file_label": "📂 Importar ficheiro JSON:",
-      "import_file_button": "Importar ficheiro"
+      "load_url_label": "📥 Load from URL:",
+      "load_url_button": "Load URL",
+      "import_file_label": "📂 Load JSON file:",
+      "import_file_button": "Load File"
     }
   },
   "labels": {
     "person_details": {
-      "dates": "📅 Datas",
-      "variants": "🔄 Variantes",
-      "gender": "⚧ Sexo",
+      "dates": "📅 Dates",
+      "variants": "🔄 Variants",
+      "gender": "⚧ Gender",
       "alias": "📝 Alias",
-      "birthplace": "🏠 Natural",
-      "residence": "🏘️ Residência",
-      "profession": "💼 Profissão",
-      "role": "👤 Papel",
-      "burial": "⚰️ Enterro",
-      "notes": "📋 Notas"
+      "birthplace": "🏠 Birthplace",
+      "residence": "🏘️ Residence",
+      "profession": "💼 Profession",
+      "role": "👤 Role",
+      "burial": "⚰️ Burial",
+      "notes": "📋 Notes"
     }
   }
 }

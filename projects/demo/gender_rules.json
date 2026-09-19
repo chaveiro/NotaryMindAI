@@ -1,0 +1,10 @@
+{
+  "gender_inference": {
+    "enabled": true,
+    "description": "Infer gender from relations when explicit gender not available",
+    "keywords": {
+      "female": [],
+      "male": []
+    }
+  }
+}
