@@ -11,27 +11,30 @@ bun skills/transcript/find_new_docs.ts projects/cotimos
 # Build consolidated JSON
 cd projects/cotimos && python3 ../../skills/transcript/build_docs_logical.py . && jq empty docs_logical.json
 
-# Validate project
+# Validate the document map
 python3 ../../skills/transcript/validate_map.py projects/cotimos
+
+# Validate the consolidated output
+python3 ../../skills/transcript/validate_docs.py projects/cotimos
 ```
 
 ---
 
-## Three Modes of Work
+## Processing Operations
 
-### Mode A: New/Reprocess Documents must use GenAI
+### `ocr`: New/Reprocess Documents with GenAI
 
 **When:** New images added to `imported/` or need retranscription  
 **Model Required:** `github-copilot/claude-opus-4.8` (check before starting)
 
-**A1 — Visual OCR (read the image)**
+**Visual OCR (read the image)**
 - GenAI reads photo or pdf → creates `metadata/<name>.json`
 - Fill: `full_transcript`, `entities`, `properties`, `persons`, `relations`
 - **Critical:** Each seller/buyer/creditor must be in `persons[]` with explicit role + one relation per person in `relations[]`
 - Follow SCHEMA.md rules
 - Consider corrections or local knowledge from `projects/<name>/GLOSSARIO.md` if existent
 
-**A2 — Reinterpretation (no Re-OCR, rederive from text)**
+### `reinterpret`: Reinterpret Existing Transcription
 - GenAI reads `metadata/<name>.json` `full_transcript` → updates `entities`, `properties`, `persons`, `relations`
 - Use when text interpretation needs fixing (without re-photographing)
 - Follow SCHEMA.md rules
@@ -40,15 +43,18 @@ python3 ../../skills/transcript/validate_map.py projects/cotimos
 **Workflow:**
 1. List pending: `bun skills/transcript/find_new_docs.ts projects/cotimos`
 2. Ask user: "Process X pending images via GenAI?"
-3. Create `metadata/` JSON files (A1 or A2)
-4. Continue to Mode C
+3. Create `metadata/` JSON files (`ocr` or `reinterpret`)
+4. Continue to `map`
 
 ---
 
-### Mode B: Update Glossary (No Re-OCR)
+### `build`: Regenerate Consolidated Data
 
-**When:** Need to add corrections or local knowledge  
-**File:** `projects/cotimos/GLOSSARIO.md`
+**When:** After changing metadata, the glossary, or the document map  
+**Inputs:** `metadata/*.json`, `GLOSSARIO.md`, `docs_logical_map.json`
+**Output:** `projects/cotimos/docs_logical.json`
+
+Glossary corrections and local knowledge are applied during this deterministic build.
 
 **Two types of entries:**
 - **Corrections** — `**Canonical** — NOT "Wrong"` (applied in-memory during build)
@@ -63,7 +69,7 @@ contains empty `identities`, `persons`, and `relations` arrays until project fac
 known.
 
 The generated project `GLOSSARIO.md`, not the root template, is consumed directly by
-`build_docs_logical.py` and supplied as context to A1/A2/C GenAI runs.
+`build_docs_logical.py` and supplied as context to `ocr`, `reinterpret`, and `map` GenAI runs.
 
 The builder reads the first valid fenced `json` object containing one of those three
 keys. Keep all structured local knowledge in that single block.
@@ -73,9 +79,17 @@ keys. Keep all structured local knowledge in that single block.
 2. Regenerate: `python3 ../../skills/transcript/build_docs_logical.py projects/cotimos`
 3. Validate: `python3 ../../skills/transcript/validate_map.py projects/cotimos`
 
+### `validate-docs`: Validate Consolidated Output
+
+**When:** Confirm that the generated `docs_logical.json` is structurally consistent
+after `build`. This checks the final output, while `validate_map.py` checks the
+intermediate `docs_logical_map.json`.
+
+**Command:** `python3 ../../skills/transcript/validate_docs.py projects/cotimos`
+
 ---
 
-### Mode C: Update Logical Document Map (No Re-OCR)
+### `map`: Update Logical Document Map (No Re-OCR)
 
 **When:** Need to group images → documents or fix transaction data  
 **File:** `projects/cotimos/docs_logical_map.json`
@@ -120,7 +134,7 @@ For EACH relation found in the document:
 
 1. **Always ask before modifying** metadata, map, or glossary
 2. **`docs_logical.json` is source of truth** — never hand-edit, regenerate via build
-3. **`metadata/*.json` are immutable** — only change via GenAI (A1/A2)
+3. **`metadata/*.json` are immutable** — only change via GenAI (`ocr`/`reinterpret`)
 4. **GLOSSARIO.md applied in-memory** — doesn't edit originals
 5. **Never invent** — mark uncertain as `[?]`, illegible as `[illegible]`
 6. **Schema** — field names are English (genealogy, persons, relations, etc.)
@@ -615,8 +629,8 @@ If you're very unsure, omit the relation rather than guess.
 
 | Problem | Solution |
 |---------|----------|
-| "Pending images found" | Run Mode A (OCR) on those images |
-| "Validation error: missing_tx_relations" | Re-run Mode A2 on image to extract genealogy |
+| "Pending images found" | Run `ocr` on those images |
+| "Validation error: missing_tx_relations" | Re-run `reinterpret` on the image to extract genealogy |
 | "Validation error: tx_relation_orphan" | Seller/buyer missing from genealogy.persons |
 | "JSON invalid" | Run `jq empty docs_logical.json` to see error |
 | "Build fails" | Check GLOSSARIO.md syntax or run with verbose flag |

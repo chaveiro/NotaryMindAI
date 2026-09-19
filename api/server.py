@@ -504,7 +504,7 @@ def api_project_file(name, file_name):
 
 @app.route("/api/projects/<name>/process", methods=["POST"])
 def api_project_process(name):
-    """Run deterministic builds or delegate GenAI modes to a configured runner."""
+    """Run a named processing operation locally or via the configured GenAI runner."""
     name = safe_name(name)
     if not name:
         return jsonify({"error": "Invalid project"}), 400
@@ -513,10 +513,10 @@ def api_project_process(name):
         return jsonify({"error": "Project does not exist"}), 404
 
     mode = (request.get_json(silent=True) or {}).get("mode", "")
-    if mode not in ("a1", "a2", "b", "c", "validate-docs"):
+    if mode not in ("ocr", "reinterpret", "build", "map", "validate-docs"):
         return jsonify({"error": "Invalid processing mode"}), 400
 
-    if mode == "b":
+    if mode == "build":
         commands = [
             ["python3", str(ROOT / "skills/transcript/build_docs_logical.py"), str(project_dir)],
         ]
@@ -545,7 +545,7 @@ def api_project_process(name):
     except (OSError, subprocess.TimeoutExpired) as error:
         return jsonify({"error": str(error), "mode": mode}), 500
 
-    return jsonify({"ok": True, "mode": mode, "model": GENAI_MODEL if mode != "b" else None, "output": "\n".join(output)})
+    return jsonify({"ok": True, "mode": mode, "model": GENAI_MODEL if mode != "build" else None, "output": "\n".join(output)})
 
 
 @app.route("/api/projects/<name>/tools", methods=["POST"])

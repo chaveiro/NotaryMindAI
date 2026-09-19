@@ -36,7 +36,7 @@ python3 server.py
   ```bash
   PORT=9000 python3 server.py
   ```
-- `NOTARYMIND_GENAI_RUNNER` — Executable used by processing Modes A1, A2, and C. It receives `<mode> <project_path> <model>`; the model is pinned to `github-copilot/claude-opus-4.8`. Mode B does not use this runner.
+- `NOTARYMIND_GENAI_RUNNER` — Executable used by processing modes `ocr`, `reinterpret`, and `map`. It receives `<mode> <project_path> <model>`; the model is pinned to `github-copilot/claude-opus-4.8`. Mode `build` does not use this runner.
 
 When the UI is served separately, pass the API origin explicitly, for example:
 `http://localhost:8000/ui/main.html?project=cotimos&api=http://localhost:8790`.
@@ -56,7 +56,7 @@ See parent README.md for full API documentation.
 - `POST /api/projects/{name}/upload` — Upload files
 - `GET|PUT /api/projects/{name}/glossary` — Read or save `GLOSSARIO.md`
 - `GET|PUT /api/projects/{name}/file/{file_name}` — Edit `GLOSSARIO.md`, `docs_logical_map.json`, `docs_logical.json`, or `gender_rules.json`
-- `POST /api/projects/{name}/process` — Run Mode A1, A2, B, or C; Mode B builds and validates locally
+- `POST /api/projects/{name}/process` — Run named operation `ocr`, `reinterpret`, `build`, `map`, or `validate-docs`; `ocr`, `reinterpret`, and `map` use `NOTARYMIND_GENAI_RUNNER`, while `build` and `validate-docs` run locally
 - `POST /api/projects/{name}/tools` — Run `audit-inference`, `validate-map`, or `validate-variants` and return captured output/exit code
 - `POST /api/agent/query` — Query genealogical data (read-only)
 

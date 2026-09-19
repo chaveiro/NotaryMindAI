@@ -48,7 +48,7 @@ The Settings modal has four outer tabs. On mobile, labels collapse to accessible
 | --- | --- |
 | Project | Subtabs for Load, New, and Load External (URL or JSON file); confirmed recursive delete |
 | Import Files | Upload supported images/PDFs and show project processing status above the drop zone |
-| Build Metadata | Run Modes A1/A2/B/C, edit glossary/map/consolidated/gender files in the reusable text editor, and display quality reports |
+| Build Metadata | Run `ocr`, `reinterpret`, `build`, and `map`; edit glossary/map/consolidated/gender files in the reusable text editor; and display quality reports |
 
 The text editor shows the active filename at bottom-left. Save and expand are on the
 bottom-right, with the rightmost `×` button closing the editor. JSON project files are

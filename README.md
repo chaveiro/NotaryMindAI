@@ -149,7 +149,7 @@ http://localhost:8787/
 |-----|--------|
 | **🗂️ Project** | Load, create, or delete projects; load external JSON from a URL or file |
 | **📥 Import Files** | Upload images/PDFs and review pending or stale metadata status |
-| **🛠️ Build Metadata** | Run A1, A2, B, or C and edit `GLOSSARIO.md` |
+| **🛠️ Build Metadata** | Run OCR, Reinterpret, Map, or Build and edit `GLOSSARIO.md` |
 | **💬 Project Chat** | Query consolidated project data (read-only) |
 
 All project selectors default to the project currently loaded in the viewer. On narrow
@@ -294,21 +294,22 @@ jq empty projects/my-archive/docs_logical.json
 
 ## 🎓 Processing Modes
 
-### Mode A: Create/Reprocess Image JSON
+### OCR / Reinterpret: Create or Reprocess Image JSON
 **When:** New images or complete retranscription needed  
-**How:** GenAI reads image + GLOSSARIO.md → generates `metadata/<name>.json`  
+**How:** GenAI reads image + GLOSSARIO.md → generates `metadata/<name>.json` (`ocr`), or
+re-derives from the existing `full_transcript` without re-reading the image (`reinterpret`)  
 **Tools:** Claude Opus 4.8 + prompts from `SKILL.md`  
 **Result:** Per-image JSON with transcription, entities, genealogy
 
-### Mode B: Update Glossary
+### Glossary Update
 **When:** Normalization rules need adjustment  
-**How:** Edit `GLOSSARIO.md` and regenerate  
+**How:** Edit `GLOSSARIO.md` and regenerate with the `build` mode  
 **Note:** Never modifies source files, applied in-memory only  
 **Result:** Consistent naming across all documents
 
-### Mode C: Update Logical Document Map
+### Map: Update Logical Document Map
 **When:** Document groupings or transactions need updating  
-**How:** Edit `docs_logical_map.json` (GenAI can help)  
+**How:** Edit `docs_logical_map.json` (GenAI `map` can help)
 **Note:** No re-OCR needed, just reorganization  
 **Result:** Updated `docs_logical.json` with correct groupings
 
@@ -368,7 +369,7 @@ Before delivering a project:
 | **README.md** | This file — project overview and quick start | Everyone |
 | **skills/transcript/SCHEMA.md** | Data format specification, fields, validation (immutable) | All users, developers |
 | **SKILL.md** | Processing workflows and GenAI integration | Users, workflow designers |
-| **skills/transcript/SKILL.md** | Detailed processing modes and critical practices | Workflow developers |
+| **skills/transcript/SKILL.md** | Detailed processing operations and critical practices | Workflow developers |
 | **ui/SKILL.md** | Viewer features and navigation | End users |
 
 ---
@@ -401,7 +402,7 @@ Before delivering a project:
 
 | Issue | Solution |
 |-------|----------|
-| "Pending images found" | Run GenAI OCR (Mode A) on those images |
+| "Pending images found" | Run GenAI OCR (`ocr` mode) on those images |
 | "Validation error: invalid relation" | Check relation `attribute` field is valid; see SCHEMA.md |
 | "JSON invalid" | Run `jq empty docs_logical.json` to see error |
 | "Viewer not loading" | Check URL parameter: `?project=my-archive` |
@@ -561,7 +562,7 @@ the real Cótimos project: reading corrections, structured local genealogy, and 
 notes. Its identity, person, and relation arrays start empty until facts are verified.
 The API creates that file from [`skills/transcript/GLOSSARY-TEMPLATE.md`](skills/transcript/GLOSSARY-TEMPLATE.md),
 replacing only the project label, directory name, and creation timestamp. The generated
-project `GLOSSARIO.md` is then shared by deterministic builds and A1/A2/C GenAI context.
+project `GLOSSARIO.md` is then shared by deterministic builds and `ocr`/`reinterpret`/`map` GenAI context.
 `docs_logical_map.json` uses `logical_documents` as its only top-level document
 collection. The generated `docs_logical.json` output separately uses `documents`.
 
@@ -623,12 +624,12 @@ PUT response: {"ok": true} or {"error": "..."}
 **Run a processing mode**
 ```
 POST /api/projects/{name}/process
-Body: {"mode": "a1|a2|b|c"}
+Body: {"mode": "ocr|reinterpret|build|map"}
 ```
 
-Mode B runs the deterministic build and validation locally. Modes A1, A2, and C use
-the executable configured by `NOTARYMIND_GENAI_RUNNER`; it receives
-`<mode> <project_path> github-copilot/claude-opus-4.8`.
+Mode `build` runs the deterministic build and validation locally. Modes `ocr`,
+`reinterpret`, and `map` use the executable configured by `NOTARYMIND_GENAI_RUNNER`; it
+receives `<mode> <project_path> github-copilot/claude-opus-4.8`.
 
 **Run a read-only quality report**
 ```

@@ -17,8 +17,8 @@ Convert photographs and PDFs of historical manuscripts into **structured, valida
 - ✅ Policy: **Never invent** — leave empty if uncertain
 
 > ⚠️ **OCR requires `github-copilot/claude-opus-4.8`**
-> Weak models produce poor transcriptions. Always verify the active model before running OCR (Mode A), 
-> reinterpretation (Mode A2), or map generation. Register model used in `ocr_metadata.genai_model`.
+> Weak models produce poor transcriptions. Always verify the active model before running OCR (`ocr` mode), 
+> reinterpretation (`reinterpret` mode), or map generation (`map` mode). Register model used in `ocr_metadata.genai_model`.
 >
 > 🔤 **`projects/<project>/GLOSSARIO.md` (normalization rules) is applied at 2 moments:**
 > 1. As **reading aid to GenAI** when generating image JSON/metadata 
@@ -64,7 +64,7 @@ NotaryMindAi/
 
 2. **Immutable Source Files**
    - Image JSON files = OCR output, **never edited by hand**
-   - Only modified via explicit GenAI reprocessing (Modes A1/A2)
+   - Only modified via explicit GenAI reprocessing (`ocr` or `reinterpret`)
    - Guarantees data integrity
 
 3. **Declarative Mapping**
@@ -260,21 +260,21 @@ http://localhost:8000/ui/main.html?project=my-archive
 
 ## 📖 Processing Modes (Detailed)
 
-### Mode A: Create/Reprocess Image JSON via GenAI
+### OCR / Reinterpret: Create or Reprocess Image JSON via GenAI
 
 Image JSON only changes **on explicit request**, via GenAI, always using the **same schema**.
 
-**A1 — Visual OCR of photo** (for new images or complete retranscription)
+**`ocr` — Visual OCR of photo** (for new images or complete retranscription)
 - Reads the image and creates/reproduces the image JSON
 - Fields: `full_transcript` + `entities` + `properties` + `genealogy` + `ocr_metadata`
 - ⭐ **Critical:** When extracting `genealogy`, also capture **transactional relationships per individual**:
   - Each seller/debtor and buyer/creditor as `persons[]` (with explicit role)
   - One relationship **per individual** in `relations[]` (e.g., `sells to`, with `category` and `value`)
 
-**A2 — Reinterpretation of `full_transcript`** (without rereading photo)
+**`reinterpret` — Reinterpretation of `full_transcript`** (without rereading photo)
 - GenAI reads the already-transcribed text and with GLOSSARIO.md support
 - Derives (or re-derives) `entities`, `properties`, `genealogy`
-- Including transactional relationships per person (same A1 requirement)
+- Including transactional relationships per person (same `ocr` requirement)
 
 **Typical workflow for new images:**
 ```bash
@@ -284,7 +284,7 @@ bun skills/transcript/find_new_docs.ts projects/my-archive
 # 2. Ask before proceeding
 # (Always ask user, show plan, wait for confirmation)
 
-# 3. Run OCR (A1) on new images only
+# 3. Run OCR (`ocr` mode) on new images only
 # Use GenAI with GLOSSARIO.md as reading aid
 # Save to projects/my-archive/metadata/<name>.json
 
@@ -301,7 +301,7 @@ python3 skills/transcript/validate_map.py projects/my-archive
 
 ---
 
-### Mode B: Glossary Updates (No Re-OCR)
+### Glossary Updates (No Re-OCR)
 
 Edit `projects/<project>/GLOSSARIO.md` without modifying image JSON.
 
@@ -331,7 +331,7 @@ python3 skills/transcript/validate_map.py projects/my-archive
 
 ---
 
-### Mode C: Generate/Update Logical Document Map
+### `map`: Generate/Update Logical Document Map
 
 Create or update `docs_logical_map.json` **without** touching image JSON.
 
@@ -417,7 +417,7 @@ Before delivering:
    - Immutable once generated (modify via regeneration only)
 
 2. **`metadata/*.json` are OCR output, never hand-edited**
-   - Only changes via explicit GenAI reprocessing (A1/A2)
+   - Only changes via explicit GenAI reprocessing (`ocr`/`reinterpret`)
    - Always same schema
 
 3. **Build is agnostic**
@@ -484,7 +484,7 @@ All prompts include `GLOSSARIO.md` as context.
 ## 🔄 Typical Session Workflow
 
 The UI exposes the same workflow through Settings: Project (load/new/external/delete),
-Import Files, Build Metadata (A1/A2/B/C plus glossary editor), and Project Chat. All
+Import Files, Build Metadata (`ocr`/`reinterpret`/`build`/`map` plus glossary editor), and Project Chat. All
 project-aware controls default to the project currently loaded in the viewer.
 
 1. **Preparation**
@@ -495,7 +495,7 @@ project-aware controls default to the project currently loaded in the viewer.
 
 2. **Process Images**
    - Ask user for confirmation
-   - Run GenAI OCR (A1) or reinterpretation (A2)
+   - Run GenAI `ocr` or `reinterpret`
    - Save metadata JSON files
 
 3. **Update Map**
@@ -510,6 +510,7 @@ project-aware controls default to the project currently loaded in the viewer.
 5. **Validate**
    ```bash
    python3 skills/transcript/validate_map.py projects/cotimos
+   python3 skills/transcript/validate_docs.py projects/cotimos
    ```
 
 6. **Report**
@@ -526,7 +527,7 @@ project-aware controls default to the project currently loaded in the viewer.
 ### Common Issues
 
 **"Pending images found"**
-→ Run GenAI OCR (A1) on those images, save to `metadata/`
+→ Run GenAI `ocr` on those images, save to `metadata/`
 
 **"Validation error: duplicate vendors"**
 → Check `docs_logical_map.json` for transactional data

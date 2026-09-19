@@ -205,12 +205,12 @@
         <div id="currentProjectDetails" class="projectDetails" style="margin-bottom:15px"></div>
         <h4 style="margin:15px 0 8px;font-size:11px;color:#94a3b8;text-transform:uppercase">Build Metadata with GenAI</h4>
         <div style="display:flex;gap:8px;margin-bottom:8px">
-          <button class="projectAction" data-mode="a1" style="flex:1;min-width:0;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">📷 OCR + Interpret</button>
-          <button class="projectAction" data-mode="a2" style="flex:1;min-width:0;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">🧠 Reinterpret only</button>
-          <button class="projectAction" data-mode="c" style="flex:1;min-width:0;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">🗺️ Generate Docs Map</button>
+          <button class="projectAction" data-mode="ocr" style="flex:1;min-width:0;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">📷 OCR + Interpret</button>
+          <button class="projectAction" data-mode="reinterpret" style="flex:1;min-width:0;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">🧠 Reinterpret only</button>
+          <button class="projectAction" data-mode="map" style="flex:1;min-width:0;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">🗺️ Generate Docs Map</button>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="projectAction" data-mode="b" style="flex:1;min-width:0;padding:10px;background:#0f766e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">🏗️ Build</button>
+          <button class="projectAction" data-mode="build" style="flex:1;min-width:0;padding:10px;background:#0f766e;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">🏗️ Build</button>
         </div>
         <h4 style="margin:15px 0 8px;font-size:11px;color:#94a3b8;text-transform:uppercase">Review Project Files</h4>
         <div style="display:flex;gap:8px;align-items:stretch">
@@ -2198,7 +2198,7 @@ const setupSourceModal = () => {
       const project = document.getElementById("currentProjectSelect").value;
       const mode = button.dataset.mode;
       if(!project) { alert("Select a project"); return; }
-      const NO_CONFIRM_MODES = new Set(["validate-docs", "b"]);
+      const NO_CONFIRM_MODES = new Set(["validate-docs", "build"]);
       if(!NO_CONFIRM_MODES.has(mode) && !confirm(`Run Mode ${mode.toUpperCase()} for ${project}?`)) return;
       const status = document.getElementById("projectActionStatus");
       document.getElementById("projectActionStatusWrap").style.display = "block";

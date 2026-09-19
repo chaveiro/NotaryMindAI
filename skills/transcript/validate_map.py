@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validation of docs_logical_map.json — Mode C
+Validation of docs_logical_map.json — `map` quality check
 Detects: multiple sellers, procuradores errados, papéis genealógicos inconsistentes
 Uso: python3 validate_map.py [/path/to/project]
 
