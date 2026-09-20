@@ -17,6 +17,64 @@ DEFAULT_ANTHROPIC_BASE = "https://api.anthropic.com"
 DEFAULT_MODEL = "github_copilot/claude-opus-4.8"
 
 
+RELATION_GUIDE = """Relation classification rules (language-agnostic):
+
+Every relation MUST include:
+- from: source person name
+- to: target person name
+- relation: source-language text (e.g. "vende a", "filho de", "casado com") — for display only
+- attribute: canonical English relation type (drives the build; MUST be one of the types below)
+- source: "explicit" (stated in the document) or "inferred" (derived from context)
+- inferedbyai: true only when you inferred a relation that is not explicitly stated
+- inference_type: explicit | inferred_same_doc (do NOT use inferred_cross_doc — that is build-only)
+- inference_confidence: high | medium | low (only when inferedbyai=true)
+- inference_reasoning: short justification (only when inferedbyai=true)
+
+Canonical relation types (~22):
+- Genealogy: filiation, marriage, kinship, affinity, godparent, descent, inheritance
+- Economic/Property: sale, purchase, mortgage, debt
+- Succession/Wills: heir, legatee, executor, testator
+- Legal/Judicial: guardian, ward, procurator, principal, witness
+- Legitimation/Recognition: legitimated, acknowledged
+- Fallback: other
+
+Attribute mapping hints (source language -> attribute):
+- filho de, filha de, descendente -> filiation
+- casado/a com, esposa de, marido de -> marriage
+- irmão/ã de, primo/a de, tio/a de -> kinship
+- sogro/a de, cunhado/a de, genro de -> affinity
+- padrinho/madrinha de, afilhado/a de -> godparent
+- herança de, herdeiro de, legítima, quinhão hereditário, lote -> inheritance
+- vende a, venda de, vendeu -> sale
+- compra de, adquire, comprador -> purchase
+- hipoteca de, penhor, confissão de dívida -> mortgage
+- deve a, devedor de, credor de -> debt
+- testamenteiro de, administrador de -> executor
+- tutor de -> guardian; tutelado de, sob tutela de -> ward
+- procurador de, procuração -> procurator; constituinte de, poderdante -> principal
+- testemunha de, testemunhas -> witness
+- legitimado/a por -> legitimated; reconhecido/a por -> acknowledged
+
+Transaction relations (sale, purchase, mortgage, debt, inheritance, heir) may add type-specific fields:
+- label: meaningful noun phrase from the document (e.g. "venda de propriedade"), never the raw verb ("vende a") or an empty string
+- seller, buyer, mortgagor, mortgagee, debtor, creditor, value
+- property: link to a properties[] entry by its description
+- date (YYYY-MM-DD), date_precision (day|month|year|approximate), date_original (verbatim source text)
+Always keep date_original verbatim and normalize date to YYYY-MM-DD.
+
+Symmetric relations (marriage, kinship) are bidirectional — record them consistently.
+Person variants go inside persons[].variants with {name, source, confidence, reasoning}; do not force uniformity."""
+
+CANONICAL_RELATION_TYPES = frozenset({
+    "filiation", "marriage", "kinship", "affinity", "godparent", "descent", "inheritance",
+    "sale", "purchase", "mortgage", "debt",
+    "heir", "legatee", "executor", "testator",
+    "guardian", "ward", "procurator", "principal", "witness",
+    "legitimated", "acknowledged",
+    "other",
+})
+
+
 class RunnerError(RuntimeError):
     """A user-actionable workflow failure."""
 

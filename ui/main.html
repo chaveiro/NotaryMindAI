@@ -2052,8 +2052,11 @@ const setupSourceModal = () => {
     const metadata = count(project.metadata);
     const pending = project.pendingMetadata == null ? Math.max(0, images - metadata) : count(project.pendingMetadata);
     const stale = count(project.staleMetadata);
-    const metadataUpdated = project.metadataUpdated == null ? pending === 0 && stale === 0 : Boolean(project.metadataUpdated);
     const { mapStatus, mapStatusReason, docsStatus, docsStatusReason } = deriveProjectStatus(project);
+    const projectNeedsAttention = mapStatus !== "ready" || docsStatus !== "ready" || pending > 0 || stale > 0;
+    const metadataUpdated = images === 0
+      ? false
+      : pending === 0 && stale === 0 && mapStatus === "ready" && docsStatus === "ready";
     const statusColor = (status) => status === "ready" ? "#10b981" : status === "empty" ? "#94a3b8" : status === "old" ? "#f59e0b" : "#f59e0b";
     const statusLabel = (label, status, reason) => {
       const suffix = reason ? ` — ${escapeHtml(reason)}` : "";
@@ -2063,13 +2066,13 @@ const setupSourceModal = () => {
       ? '<span style="color:#94a3b8">No imported files</span>'
       : metadataUpdated
         ? '<span style="color:#10b981">Metadata up to date</span>'
-        : `<span style="color:#f59e0b">${pending} pending metadata (no JSON yet) · ${stale} stale metadata (source newer than JSON)</span>`;
+        : `<span style="color:#f59e0b">${pending} pending metadata (no JSON yet) · ${stale} stale metadata (source newer than JSON)${mapStatus !== "ready" || docsStatus !== "ready" ? ` · project needs attention: ${mapStatus !== "ready" ? `map ${mapStatus}` : ""}${mapStatus !== "ready" && docsStatus !== "ready" ? "; " : ""}${docsStatus !== "ready" ? `docs ${docsStatus}` : ""}` : ""}</span>`;
     const pendingNames = [
       ...(Array.isArray(project.pendingFiles) ? project.pendingFiles : []),
       ...(Array.isArray(project.staleFiles) ? project.staleFiles : []),
     ];
     container.innerHTML = `
-      <div style="border-left:3px solid ${metadataUpdated ? '#10b981' : '#f59e0b'};padding-left:9px">
+      <div style="border-left:3px solid ${projectNeedsAttention ? '#f59e0b' : '#10b981'};padding-left:9px">
         <b style="font-size:12px;color:#e2e8f0">${escapeHtml(project.name)}</b>
         <div style="margin-top:6px;color:#cbd5e1">${documents} documents, ${images} images <span style="color:#64748b">|</span> persons=${persons}, relations=${relations}</div>
         <div style="margin-top:4px;color:#94a3b8">${metadata} metadata files</div>
