@@ -1,7 +1,10 @@
 import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
+import api.server as server
 from api.server import app
 
 
@@ -106,6 +109,68 @@ class ApiContractTests(unittest.TestCase):
 
         self.assertIn("paths", document)
         self.assertIn("components", document)
+
+    def test_project_details_reports_pending_map_and_old_docs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            projects_dir = root / "projects"
+            project_dir = projects_dir / "demo"
+            imported_dir = project_dir / "imported"
+            imported_dir.mkdir(parents=True)
+            (project_dir / "metadata").mkdir(parents=True)
+            (imported_dir / "a.jpg").write_text("a", encoding="utf-8")
+            (imported_dir / "b.png").write_text("b", encoding="utf-8")
+            (project_dir / "docs_logical_map.json").write_text(
+                json.dumps({"schema_version": "2.0", "logical_documents": []}),
+                encoding="utf-8",
+            )
+            (project_dir / "docs_logical.json").write_text(
+                json.dumps({
+                    "schema_version": "2.0",
+                    "total_logical_documents": 1,
+                    "total_images": 1,
+                    "persons": [],
+                    "relations": [],
+                    "documents": [],
+                }),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(server, "PROJECTS_DIR", projects_dir):
+                with app.test_client() as client:
+                    response = client.get("/api/projects/demo/details")
+
+        self.assertEqual(response.status_code, 200)
+        details = response.get_json()
+        self.assertEqual(details["images"], 2)
+        self.assertEqual(details["mapDocuments"], 0)
+        self.assertEqual(details["mapImages"], 0)
+        self.assertEqual(details["docsTotalImages"], 1)
+
+    def test_project_details_reports_pending_docs_when_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            projects_dir = root / "projects"
+            project_dir = projects_dir / "demo"
+            imported_dir = project_dir / "imported"
+            imported_dir.mkdir(parents=True)
+            (project_dir / "metadata").mkdir(parents=True)
+            (imported_dir / "a.jpg").write_text("a", encoding="utf-8")
+            (project_dir / "docs_logical_map.json").write_text(
+                json.dumps({"schema_version": "2.0", "logical_documents": [{"id": "dl-1", "title": "doc", "type": "sale", "images": ["a.jpg"]}]}),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(server, "PROJECTS_DIR", projects_dir):
+                with app.test_client() as client:
+                    response = client.get("/api/projects/demo/details")
+
+        self.assertEqual(response.status_code, 200)
+        details = response.get_json()
+        self.assertEqual(details["images"], 1)
+        self.assertEqual(details["mapDocuments"], 1)
+        self.assertEqual(details["mapImages"], 1)
+        self.assertEqual(details["docsTotalImages"], 0)
 
 
 if __name__ == "__main__":

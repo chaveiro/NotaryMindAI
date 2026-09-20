@@ -1877,6 +1877,7 @@ const setupSourceModal = () => {
     throw new Error(`API unavailable (${failures.join("; ")})`);
   };
   let projectsCache = [];
+  let modalSelectedProject = LOADED_PROJECT_NAME;
 
   const archiveName = document.getElementById("archiveName");
   const archiveTooltip = document.getElementById("archiveTooltip");
@@ -1909,6 +1910,7 @@ const setupSourceModal = () => {
     const images = Number(project.images) || 0;
     const pending = Number(project.pendingMetadata) || 0;
     const stale = Number(project.staleMetadata) || 0;
+    const projectStatus = deriveProjectStatus(project);
     const reasons = [];
     if(images === 0) reasons.push("no imported images");
     if(pending) reasons.push(`${pending} image${pending === 1 ? "" : "s"} without metadata`);
@@ -1916,6 +1918,9 @@ const setupSourceModal = () => {
     if(!project.hasMap) reasons.push("document map missing");
     if(!project.hasGlossary) reasons.push("glossary missing");
     if(!project.hasData) reasons.push("consolidated data missing");
+    if(projectStatus.mapStatus === "pending") reasons.push(projectStatus.mapStatusReason || "map generation pending");
+    if(projectStatus.docsStatus === "old") reasons.push(projectStatus.docsStatusReason || "consolidated data is stale");
+    if(projectStatus.docsStatus === "pending") reasons.push(projectStatus.docsStatusReason || "consolidated data pending");
 
     if(counts) {
       counts.textContent = `${Number(project.persons) || 0} persons · ${Number(project.relations) || 0} relations · ${Number(project.properties) || MODEL?.properties?.length || 0} properties`;
@@ -1951,7 +1956,7 @@ const setupSourceModal = () => {
     } else {
       badge.style.display = "inline-block";
       badge.style.color = "#fbbf24";
-      badge.textContent = `⚠ ${reason}`;
+      badge.textContent = `${ready ? "●" : "⚠"} Project status: ${ready ? "Ready" : "Needs attention"}`;
       badge.title = reason;
     }
   };
@@ -1959,6 +1964,50 @@ const setupSourceModal = () => {
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   })[char]);
+
+  const deriveProjectStatus = (project) => {
+    const images = Number(project?.images) || 0;
+    const mapDocuments = Number(project?.mapDocuments) || 0;
+    const mapImages = Number(project?.mapImages) || 0;
+    const docs = Number(project?.docs) || 0;
+    const docsTotalImages = Number(project?.docsTotalImages) || 0;
+
+    const mapStatus = images === 0
+      ? "empty"
+      : !project?.hasMap || mapDocuments === 0 || mapImages !== images
+        ? "pending"
+        : "ready";
+    const mapStatusReason = images === 0
+      ? "No imported images"
+      : !project?.hasMap
+        ? "map missing"
+        : mapDocuments === 0
+          ? "map logical_documents is empty"
+          : mapImages !== images
+            ? `map logical_documents cover ${mapImages} of ${images} imported images`
+            : "";
+
+    const docsStatus = images === 0
+      ? "empty"
+      : !project?.hasData
+        ? "pending"
+        : docsTotalImages !== images || (mapDocuments && docs !== mapDocuments) || (mapImages && docsTotalImages !== mapImages)
+          ? "old"
+          : "ready";
+    const docsStatusReason = images === 0
+      ? "No imported images"
+      : !project?.hasData
+        ? "docs_logical missing"
+        : docsTotalImages !== images
+          ? `docs_logical covers ${docsTotalImages} of ${images} imported images`
+          : (mapDocuments && docs !== mapDocuments)
+            ? `docs_logical has ${docs} documents but map has ${mapDocuments}`
+            : (mapImages && docsTotalImages !== mapImages)
+              ? `docs_logical covers ${docsTotalImages} images but map covers ${mapImages}`
+              : "";
+
+    return { mapStatus, mapStatusReason, docsStatus, docsStatusReason };
+  };
 
   const fetchProjects = async () => {
     const resp = await apiFetch(`/api/projects`);
@@ -1970,6 +2019,24 @@ const setupSourceModal = () => {
   };
 
   const findProject = (name) => projectsCache.find(project => project.name === name);
+
+  const getModalPreferredProject = (fallback = "") => modalSelectedProject || LOADED_PROJECT_NAME || fallback;
+
+  const syncModalProjectSelectors = (name) => {
+    if(!name) return;
+    modalSelectedProject = name;
+    [
+      "projectSelect",
+      "importProjectSelect",
+      "currentProjectSelect",
+      "chatProjectSelect",
+    ].forEach((id) => {
+      const select = document.getElementById(id);
+      if(select && Array.from(select.options).some(option => option.value === name)) {
+        select.value = name;
+      }
+    });
+  };
 
   const renderProjectDetails = (project, container) => {
     if(!container) return;
@@ -1986,6 +2053,12 @@ const setupSourceModal = () => {
     const pending = project.pendingMetadata == null ? Math.max(0, images - metadata) : count(project.pendingMetadata);
     const stale = count(project.staleMetadata);
     const metadataUpdated = project.metadataUpdated == null ? pending === 0 && stale === 0 : Boolean(project.metadataUpdated);
+    const { mapStatus, mapStatusReason, docsStatus, docsStatusReason } = deriveProjectStatus(project);
+    const statusColor = (status) => status === "ready" ? "#10b981" : status === "empty" ? "#94a3b8" : status === "old" ? "#f59e0b" : "#f59e0b";
+    const statusLabel = (label, status, reason) => {
+      const suffix = reason ? ` — ${escapeHtml(reason)}` : "";
+      return `<div style="margin-top:4px;color:${statusColor(status)}"><b>${label}:</b> ${escapeHtml(status)}${suffix}</div>`;
+    };
     const metadataState = images === 0
       ? '<span style="color:#94a3b8">No imported files</span>'
       : metadataUpdated
@@ -2000,6 +2073,8 @@ const setupSourceModal = () => {
         <b style="font-size:12px;color:#e2e8f0">${escapeHtml(project.name)}</b>
         <div style="margin-top:6px;color:#cbd5e1">${documents} documents, ${images} images <span style="color:#64748b">|</span> persons=${persons}, relations=${relations}</div>
         <div style="margin-top:4px;color:#94a3b8">${metadata} metadata files</div>
+        ${statusLabel("Map", mapStatus, mapStatusReason)}
+        ${statusLabel("Docs", docsStatus, docsStatusReason)}
         <div style="margin-top:4px">${metadataState}</div>
         ${pendingNames.length ? `<div title="${escapeHtml(pendingNames.join(', '))}" style="margin-top:5px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Needs processing: ${escapeHtml(pendingNames.slice(0, 4).join(', '))}${pendingNames.length > 4 ? '…' : ''}</div>` : ''}
       </div>`;
@@ -2020,10 +2095,11 @@ const setupSourceModal = () => {
       document.querySelectorAll(".settingsTab").forEach(t => t.style.borderBottom = "2px solid transparent");
       document.getElementById(`tab-${tabName}`).style.display = "block";
       selectedTab.style.borderBottom = "2px solid #2563eb";
-      if(tabName === "projects") refreshProjectsList(projectsCache, LOADED_PROJECT_NAME);
-      if(tabName === "import") refreshImportProjectList(projectsCache, LOADED_PROJECT_NAME);
-      if(tabName === "current") refreshCurrentProjectList(projectsCache, LOADED_PROJECT_NAME);
-      if(tabName === "chat") refreshChatProjectList();
+      const preferredProject = getModalPreferredProject(PROJECT_NAME);
+      if(tabName === "projects") refreshProjectsList(projectsCache, preferredProject);
+      if(tabName === "import") refreshImportProjectList(projectsCache, preferredProject);
+      if(tabName === "current") refreshCurrentProjectList(projectsCache, preferredProject);
+      if(tabName === "chat") refreshChatProjectList(projectsCache, preferredProject);
     });
   });
 
@@ -2046,7 +2122,8 @@ const setupSourceModal = () => {
     try {
       if(!projects.length) projects = await fetchProjects();
       const select = document.getElementById("projectSelect");
-      fillProjectSelect(select, projects, preferred || LOADED_PROJECT_NAME || select.value);
+      fillProjectSelect(select, projects, preferred || getModalPreferredProject(select.value));
+      syncModalProjectSelectors(select.value);
       const container = document.getElementById("projectsListContainer");
       if(projects.length === 0) {
         container.innerHTML = "<em>No projects found. Create one below.</em>";
@@ -2058,6 +2135,7 @@ const setupSourceModal = () => {
     }
   };
   document.getElementById("projectSelect").addEventListener("change", event => {
+    syncModalProjectSelectors(event.target.value);
     renderProjectDetails(findProject(event.target.value), document.getElementById("projectsListContainer"));
   });
 
@@ -2070,6 +2148,7 @@ const setupSourceModal = () => {
       if(!resp.ok) throw new Error("Project has no data");
       const data = await resp.json();
       LOADED_PROJECT_NAME = name;
+      modalSelectedProject = name;
       await reloadData(data);
       updateHeaderProjectStatus(findProject(name));
       modal.style.display = "none";
@@ -2128,13 +2207,15 @@ const setupSourceModal = () => {
     try {
       if(!projects.length) projects = await fetchProjects();
       const select = document.getElementById("importProjectSelect");
-      fillProjectSelect(select, projects, preferred || LOADED_PROJECT_NAME || select.value);
+      fillProjectSelect(select, projects, preferred || getModalPreferredProject(select.value));
+      syncModalProjectSelectors(select.value);
       renderProjectDetails(findProject(select.value), document.getElementById("importProjectDetails"));
     } catch(e) {
       console.error("Error:", e);
     }
   };
   document.getElementById("importProjectSelect").addEventListener("change", event => {
+    syncModalProjectSelectors(event.target.value);
     renderProjectDetails(findProject(event.target.value), document.getElementById("importProjectDetails"));
   });
 
@@ -2173,13 +2254,15 @@ const setupSourceModal = () => {
     try {
       if(!projects.length) projects = await fetchProjects();
       const select = document.getElementById("currentProjectSelect");
-      fillProjectSelect(select, projects, preferred || LOADED_PROJECT_NAME || select.value);
+      fillProjectSelect(select, projects, preferred || getModalPreferredProject(select.value));
+      syncModalProjectSelectors(select.value);
       renderProjectDetails(findProject(select.value), document.getElementById("currentProjectDetails"));
     } catch(e) {
       document.getElementById("currentProjectDetails").innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(e.message)}</span>`;
     }
   };
   document.getElementById("currentProjectSelect").addEventListener("change", event => {
+    syncModalProjectSelectors(event.target.value);
     renderProjectDetails(findProject(event.target.value), document.getElementById("currentProjectDetails"));
   });
 
@@ -2397,18 +2480,20 @@ const setupSourceModal = () => {
   });
 
   // ========== Agent Chat ==========
-  const refreshChatProjectList = async (projects = projectsCache) => {
+  const refreshChatProjectList = async (projects = projectsCache, preferred = "") => {
     try {
       if(!projects.length) projects = await fetchProjects();
       const select = document.getElementById("chatProjectSelect");
       const available = projects.filter(project => project.hasData);
-      fillProjectSelect(select, available, select.value || PROJECT_NAME);
+      fillProjectSelect(select, available, preferred || getModalPreferredProject(select.value || PROJECT_NAME));
+      syncModalProjectSelectors(select.value);
       renderProjectDetails(findProject(select.value), document.getElementById("chatProjectDetails"));
     } catch(e) {
       console.error("Error:", e);
     }
   };
   document.getElementById("chatProjectSelect").addEventListener("change", event => {
+    syncModalProjectSelectors(event.target.value);
     renderProjectDetails(findProject(event.target.value), document.getElementById("chatProjectDetails"));
   });
 
@@ -2417,7 +2502,7 @@ const setupSourceModal = () => {
       refreshProjectsList(projects, preferred),
       refreshImportProjectList(projects, preferred),
       refreshCurrentProjectList(projects, preferred),
-      refreshChatProjectList(projects),
+      refreshChatProjectList(projects, preferred),
     ]);
   };
 
@@ -2467,8 +2552,9 @@ const setupSourceModal = () => {
       modal.style.display = "flex";
       if(currentSource) currentSource.textContent = CURRENT_SOURCE;
       try {
+        modalSelectedProject = LOADED_PROJECT_NAME;
         const projects = await fetchProjects();
-        await refreshAllProjectControls(projects, LOADED_PROJECT_NAME);
+        await refreshAllProjectControls(projects, modalSelectedProject);
       } catch(e) {
         document.getElementById("projectsListContainer").innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(e.message)}</span>`;
       }

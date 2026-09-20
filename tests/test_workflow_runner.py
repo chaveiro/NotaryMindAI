@@ -35,7 +35,7 @@ class WorkflowRunnerCliTests(unittest.TestCase):
             self.assertEqual(build_runtime_config("claude-opus-4.8")["model"], "claude-opus-4.8")
 
         with mock.patch.dict(os.environ, {"GENAI_PROVIDER": "copilot"}, clear=True):
-            self.assertEqual(build_runtime_config(" github-copilot/haiku-4.5 ")["model"], "github-copilot/haiku-4.5")
+            self.assertEqual(build_runtime_config(" github_copilot/haiku-4.5 ")["model"], "github_copilot/haiku-4.5")
 
         with mock.patch.dict(os.environ, {"GENAI_PROVIDER": "openai"}, clear=True):
             self.assertEqual(build_runtime_config(" local-model ")["model"], "local-model")
@@ -45,11 +45,13 @@ class WorkflowRunnerCliTests(unittest.TestCase):
             os.environ,
             {
                 "GENAI_PROVIDER": "copilot",
-                "GITHUB_COPILOT_API_BASE": "https://api.githubcopilot.com",
+                "GITHUB_COPILOT_API_BASE": "https://api.enterprise.githubcopilot.com",
             },
             clear=False,
         ):
-            self.assertEqual(build_runtime_config("copilot-gpt-4.1")["api_base"], "https://api.githubcopilot.com")
+            config = build_runtime_config("github_copilot/gpt-4.1")
+            self.assertEqual(config["provider"], "github_copilot")
+            self.assertEqual(config["api_base"], "https://api.enterprise.githubcopilot.com")
 
         with mock.patch.dict(
             os.environ,
@@ -66,14 +68,14 @@ class WorkflowRunnerCliTests(unittest.TestCase):
             os.environ,
             {
                 "GENAI_PROVIDER": "copilot",
-                "GITHUB_COPILOT_API_BASE": "https://api.githubcopilot.com",
+                "GITHUB_COPILOT_API_BASE": "https://api.enterprise.githubcopilot.com",
             },
             clear=False,
         ):
             config = build_runtime_config("github_copilot/claude-opus-4.8")
-            self.assertEqual(config["provider"], "copilot")
+            self.assertEqual(config["provider"], "github_copilot")
             self.assertEqual(config["model"], "github_copilot/claude-opus-4.8")
-            self.assertEqual(config["api_base"], "https://api.githubcopilot.com")
+            self.assertEqual(config["api_base"], "https://api.enterprise.githubcopilot.com")
             self.assertEqual(config["api_key_name"], "")
 
     def test_runtime_examples_for_azure_vertex_bedrock_and_ollama(self):
@@ -147,7 +149,7 @@ class WorkflowRunnerCliTests(unittest.TestCase):
                 "NOTARYMIND_OCR_MODEL": "github_copilot/claude-opus-4.8",
                 "NOTARYMIND_GENAI_MODEL": "gpt-4o-mini",
                 "GENAI_PROVIDER": "copilot",
-                "GITHUB_COPILOT_API_BASE": "https://api.githubcopilot.com",
+                "GITHUB_COPILOT_API_BASE": "https://api.enterprise.githubcopilot.com",
             },
             clear=True,
         ):
@@ -155,7 +157,7 @@ class WorkflowRunnerCliTests(unittest.TestCase):
             config = build_runtime_config(model)
 
         self.assertEqual(model, "github_copilot/claude-opus-4.8")
-        self.assertEqual(config["provider"], "copilot")
+        self.assertEqual(config["provider"], "github_copilot")
         self.assertEqual(config["model"], "github_copilot/claude-opus-4.8")
 
     def test_task_modules_expose_run_entrypoints(self):

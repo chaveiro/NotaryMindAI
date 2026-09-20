@@ -76,9 +76,9 @@ def build_runtime_config(model: str) -> dict[str, Any]:
         api_key_name = ""
         api_base = os.environ.get("OLLAMA_API_BASE", os.environ.get("OPENAI_API_BASE", "http://localhost:11434")).rstrip("/")
     elif provider_hint in {"copilot", "githubcopilot", "github_copilot"} or normalized.startswith(("copilot/", "github-copilot/", "github_copilot/")):
-        provider = "copilot"
+        provider = "github_copilot"
         api_key_name = ""
-        api_base = os.environ.get("GITHUB_COPILOT_API_BASE", os.environ.get("OPENAI_API_BASE", os.environ.get("OPENAI_BASE_URL", COPILOT_API_BASE))).rstrip("/")
+        api_base = os.environ.get("GITHUB_COPILOT_API_BASE", os.environ.get("OPENAI_API_BASE", os.environ.get("OPENAI_BASE_URL", "https://api.enterprise.githubcopilot.com"))).rstrip("/")
     elif provider_hint in {"lmstudio", "local"}:
         provider = "openai"
         api_key_name = "OPENAI_API_KEY"

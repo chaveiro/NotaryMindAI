@@ -142,6 +142,7 @@ def normalize(s: str) -> str:
 def project_details(entry: Path) -> dict:
     """Return processing status for one project directory."""
     data_path = entry / "docs_logical.json"
+    map_path = entry / "docs_logical_map.json"
     imported_dir = entry / "imported"
     metadata_dir = entry / "metadata"
     imported_files = sorted(
@@ -154,15 +155,37 @@ def project_details(entry: Path) -> dict:
         if f.stem in metadata_files and metadata_files[f.stem].stat().st_mtime < f.stat().st_mtime
     ]
 
+    map_documents = 0
+    map_images = 0
+    map_exists = map_path.exists()
+    if map_exists:
+        try:
+            with open(map_path, encoding="utf-8") as file_handle:
+                map_data = json.load(file_handle)
+            logical_documents = map_data.get("logical_documents", [])
+            if isinstance(logical_documents, list):
+                map_documents = len(logical_documents)
+                map_images = sum(
+                    len(document.get("images", []))
+                    for document in logical_documents
+                    if isinstance(document, dict)
+                )
+        except Exception:
+            map_documents = 0
+            map_images = 0
+
     docs = 0
+    docs_total_images = 0
     persons = 0
     relations = 0
     properties = 0
+    data_exists = data_path.exists()
     if data_path.exists():
         try:
             with open(data_path) as file_handle:
                 data = json.load(file_handle)
             docs = data.get("total_logical_documents", len(data.get("documents", [])))
+            docs_total_images = data.get("total_images", 0)
             persons = len(data.get("persons", []))
             relations = len(data.get("relations", []))
             properties = len(data.get("properties", []))
@@ -176,9 +199,10 @@ def project_details(entry: Path) -> dict:
 
     return {
         "name": entry.name,
-        "hasData": data_path.exists(),
+        "hasData": data_exists,
         "images": len(imported_files),
         "docs": docs,
+        "docsTotalImages": docs_total_images,
         "persons": persons,
         "relations": relations,
         "properties": properties,
@@ -189,7 +213,9 @@ def project_details(entry: Path) -> dict:
         "pendingFiles": pending,
         "staleFiles": stale,
         "hasGlossary": (entry / "GLOSSARIO.md").exists(),
-        "hasMap": (entry / "docs_logical_map.json").exists(),
+        "hasMap": map_exists,
+        "mapDocuments": map_documents,
+        "mapImages": map_images,
     }
 
 
