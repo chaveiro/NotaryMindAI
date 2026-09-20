@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0",
-  "name": "demo",
-  "description": "Archive demo",
+  "name": "My demo project",
+  "description": "Archive My demo project",
   "logical_documents": []
 }

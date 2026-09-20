@@ -531,7 +531,7 @@ def build():
         "schema_version": SCHEMA_VERSION,
         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "source": "skills/transcript/SKILL.md",
-        "model": "github-copilot/claude-opus-4.8",
+        "model": "github_copilot/claude-opus-4.8",
         "method": "genuine_visual_reading",
         "name": ARCHIVE_NAME,
         "description": ARCHIVE_DESC,

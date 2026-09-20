@@ -1,8 +1,8 @@
 {
   "schema_version": "2.0",
-  "name": "demo",
-  "description": "Archive demo",
-  "timestamp": "2026-09-19T00:16:31.448955+00:00",
+  "name": "My demo project",
+  "description": "Archive My demo project",
+  "timestamp": "2026-09-20T17:37:04.195816+00:00",
   "total_logical_documents": 0,
   "total_images": 0,
   "persons": [],

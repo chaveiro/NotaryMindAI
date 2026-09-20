@@ -15,13 +15,13 @@ The runner accepts the operation and project directory, and optionally a model s
 1. `NOTARYMIND_<OPERATION>_MODEL`
 2. `NOTARYMIND_GENAI_MODEL`
 3. the optional CLI model argument
-4. the built-in default `claude-opus-4.8`
+4. the built-in default `github_copilot/claude-opus-4.8`
 
-The model string is passed through as-is. There is no custom alias normalization layer.
+The model string is passed through exactly as provided. No alias table or rewriting is applied.
 
 ## Current behavior
 
-- `normalize_model_name()` returns the exact model string after trimming whitespace
+- model selection trims whitespace only; it does not rewrite provider prefixes or aliases
 - provider selection is still based on `GENAI_PROVIDER` and the model prefix when needed
 - the worker owns provider-specific handling, including Copilot device-login prompts
 - the API server remains generic and just streams worker output back to the browser
@@ -32,10 +32,12 @@ The model string is passed through as-is. There is no custom alias normalization
 
 GitHub Copilot is handled via LiteLLM's own device login flow. Do not treat it as a standard `OPENAI_API_KEY` provider.
 
+Use the exact LiteLLM model string, for example:
+
 ```bash
 export GENAI_PROVIDER=copilot
 export GITHUB_COPILOT_API_BASE="https://api.githubcopilot.com"
-export NOTARYMIND_OCR_MODEL="github-copilot/claude-opus-4.8"
+export NOTARYMIND_OCR_MODEL="github_copilot/claude-opus-4.8"
 python3 workflow_runner/runner.py ocr projects/demo_project
 ```
 

@@ -11,10 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 from workflow_runner.runner import (
     ProjectLock,
     RunnerError,
-    _copilot_login_text,
     build_runtime_config,
     selected_model,
 )
+from workflow_runner.tasks.ocr_task import run_ocr
+from workflow_runner.tasks.interpret_task import run_interpret
+from workflow_runner.tasks.map_task import run_map
 
 
 class WorkflowRunnerCliTests(unittest.TestCase):
@@ -36,7 +38,7 @@ class WorkflowRunnerCliTests(unittest.TestCase):
             self.assertEqual(build_runtime_config(" github-copilot/haiku-4.5 ")["model"], "github-copilot/haiku-4.5")
 
         with mock.patch.dict(os.environ, {"GENAI_PROVIDER": "openai"}, clear=True):
-            self.assertEqual(build_runtime_config(" local-model ")["model"], "openai/local-model")
+            self.assertEqual(build_runtime_config(" local-model ")["model"], "local-model")
 
     def test_runtime_examples_for_copilot_and_lm_studio(self):
         with mock.patch.dict(
@@ -68,9 +70,9 @@ class WorkflowRunnerCliTests(unittest.TestCase):
             },
             clear=False,
         ):
-            config = build_runtime_config("github-copilot/claude-opus-4.8")
+            config = build_runtime_config("github_copilot/claude-opus-4.8")
             self.assertEqual(config["provider"], "copilot")
-            self.assertEqual(config["model"], "github-copilot/claude-opus-4.8")
+            self.assertEqual(config["model"], "github_copilot/claude-opus-4.8")
             self.assertEqual(config["api_base"], "https://api.githubcopilot.com")
             self.assertEqual(config["api_key_name"], "")
 
@@ -87,7 +89,7 @@ class WorkflowRunnerCliTests(unittest.TestCase):
         ):
             config = build_runtime_config("gpt-4.1")
             self.assertEqual(config["provider"], "azure")
-            self.assertEqual(config["model"], "azure/gpt-4.1")
+            self.assertEqual(config["model"], "gpt-4.1")
             self.assertEqual(config["api_key_name"], "AZURE_API_KEY")
             self.assertEqual(config["request_kwargs"]["api_version"], "2024-10-21")
 
@@ -102,7 +104,7 @@ class WorkflowRunnerCliTests(unittest.TestCase):
         ):
             config = build_runtime_config("gemini-2.0-flash")
             self.assertEqual(config["provider"], "vertex_ai")
-            self.assertEqual(config["model"], "vertex_ai/gemini-2.0-flash")
+            self.assertEqual(config["model"], "gemini-2.0-flash")
             self.assertEqual(config["request_kwargs"]["vertex_project"], "demo-project")
             self.assertEqual(config["request_kwargs"]["vertex_location"], "us-central1")
 
@@ -116,7 +118,7 @@ class WorkflowRunnerCliTests(unittest.TestCase):
         ):
             config = build_runtime_config("anthropic.claude-3-5-sonnet-20241022-v2:0")
             self.assertEqual(config["provider"], "bedrock")
-            self.assertEqual(config["model"], "bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+            self.assertEqual(config["model"], "anthropic.claude-3-5-sonnet-20241022-v2:0")
             self.assertEqual(config["request_kwargs"]["aws_region_name"], "us-east-1")
 
         with mock.patch.dict(
@@ -128,12 +130,12 @@ class WorkflowRunnerCliTests(unittest.TestCase):
         ):
             config = build_runtime_config("llama3.1:8b")
             self.assertEqual(config["provider"], "ollama")
-            self.assertEqual(config["model"], "ollama_chat/llama3.1:8b")
+            self.assertEqual(config["model"], "llama3.1:8b")
             self.assertEqual(config["api_base"], "http://localhost:11434")
 
     def test_model_is_selected_without_cli_model(self):
         with mock.patch.dict(os.environ, {}, clear=True):
-            self.assertEqual(selected_model("ocr", ""), "claude-opus-4.8")
+            self.assertEqual(selected_model("ocr", ""), "github_copilot/claude-opus-4.8")
 
         with mock.patch.dict(os.environ, {"NOTARYMIND_OCR_MODEL": "haiku 4.5"}, clear=True):
             self.assertEqual(selected_model("ocr", ""), "haiku 4.5")
@@ -142,7 +144,7 @@ class WorkflowRunnerCliTests(unittest.TestCase):
         with mock.patch.dict(
             os.environ,
             {
-                "NOTARYMIND_OCR_MODEL": "github-copilot/claude-opus-4.8",
+                "NOTARYMIND_OCR_MODEL": "github_copilot/claude-opus-4.8",
                 "NOTARYMIND_GENAI_MODEL": "gpt-4o-mini",
                 "GENAI_PROVIDER": "copilot",
                 "GITHUB_COPILOT_API_BASE": "https://api.githubcopilot.com",
@@ -152,15 +154,14 @@ class WorkflowRunnerCliTests(unittest.TestCase):
             model = selected_model("ocr", "")
             config = build_runtime_config(model)
 
-        self.assertEqual(model, "github-copilot/claude-opus-4.8")
+        self.assertEqual(model, "github_copilot/claude-opus-4.8")
         self.assertEqual(config["provider"], "copilot")
-        self.assertEqual(config["model"], "github-copilot/claude-opus-4.8")
+        self.assertEqual(config["model"], "github_copilot/claude-opus-4.8")
 
-    def test_copilot_login_text_matches_litellm_device_prompt(self):
-        hint = _copilot_login_text()
-        self.assertIn("Please visit", hint)
-        self.assertIn("to authenticate", hint)
-        self.assertNotIn("GitHub Copilot requires", hint)
+    def test_task_modules_expose_run_entrypoints(self):
+        self.assertTrue(callable(run_ocr))
+        self.assertTrue(callable(run_interpret))
+        self.assertTrue(callable(run_map))
 
     def test_project_lock_error_mentions_project_and_lock_path(self):
         with tempfile.TemporaryDirectory() as tmp:

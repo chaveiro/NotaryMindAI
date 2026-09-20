@@ -247,10 +247,12 @@ export NOTARYMIND_GENAI_MODEL="claude-opus-4.8"
 export GENAI_PROVIDER=copilot
 export GITHUB_COPILOT_API_BASE="https://api.githubcopilot.com"
 
-export NOTARYMIND_OCR_MODEL="github-copilot/claude-opus-4.8"
-export NOTARYMIND_INTERPRET_MODEL="github-copilot/haiku-4.5"
-export NOTARYMIND_MAP_MODEL="github-copilot/haiku-4.5"
+export NOTARYMIND_OCR_MODEL="github_copilot/claude-opus-4.8"
+export NOTARYMIND_INTERPRET_MODEL="github_copilot/haiku-4.5"
+export NOTARYMIND_MAP_MODEL="github_copilot/haiku-4.5"
 ```
+
+> Use the exact LiteLLM Copilot model strings above. They are passed through unchanged; no alias rewriting is applied.
 
 > Copilot is handled through LiteLLM's GitHub device-login flow and does not use `OPENAI_API_KEY`.
 
@@ -403,7 +405,7 @@ Before delivering a project:
    - Use GLOSSARIO.md for corrections, not editing JSON
 
 4. **Use correct model for OCR**
-   - **Required:** `github-copilot/claude-opus-4.8`
+   - **Required:** `github_copilot/claude-opus-4.8`
    - Weak models produce poor transcriptions
    - Ask before proceeding if model isn't right
 

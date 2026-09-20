@@ -1,5 +1,21 @@
 """External OCR task prompt and schema contract for the runner."""
 
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from workflow_runner.common import (
+    RunnerError,
+    SUPPORTED_EXTENSIONS,
+    _atomic_json,
+    _glossary,
+    _metadata_files,
+    _read_json,
+    _request_json,
+)
+
 OCR_TASK = """You are extracting the raw archival transcription from one historical image or PDF page.
 
 Use only evidence in the supplied image, transcript, glossary, or project files. Never invent names, dates, values, or relations. Use empty values or '[?]' when evidence is unavailable. Return JSON only, without Markdown.
@@ -66,3 +82,36 @@ OCR_SCHEMA = {
         },
     },
 }
+
+
+def run_ocr(project: Path, model: str) -> dict[str, Any]:
+    imported = sorted(p for p in (project / "imported").iterdir() if p.suffix.lower() in SUPPORTED_EXTENSIONS)
+    metadata = project / "metadata"
+    metadata.mkdir(exist_ok=True)
+    pending = [image for image in imported if not (metadata / f"{image.stem}.json").exists()]
+    written = []
+    failures = []
+    for image in pending:
+        try:
+            prompt = f"{OCR_TASK}\n\nGlossary:\n{_glossary(project)}"
+            result = _request_json([{"role": "user", "content": prompt}], model, image)
+            if not isinstance(result, dict):
+                raise RunnerError("OCR result must be a JSON object")
+            result["image"] = image.name
+            result.setdefault("ocr_metadata", {})["genai_model"] = model
+            result["ocr_metadata"]["method"] = "workflow_runner.ocr"
+            _atomic_json(metadata / f"{image.stem}.json", result)
+            written.append(image.name)
+        except RunnerError as error:
+            failures.append({"file": image.name, "error": str(error)})
+    return {
+        "operation": "ocr",
+        "model": model,
+        "processed": len(written),
+        "skipped": len(imported) - len(pending),
+        "failed": failures,
+        "files_written": written,
+    }
+
+
+__all__ = ["OCR_TASK", "OCR_SCHEMA", "run_ocr"]

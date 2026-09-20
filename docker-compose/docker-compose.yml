@@ -15,9 +15,9 @@ services:
       OPENAI_API_BASE: ${OPENAI_API_BASE:-https://api.openai.com}
       ANTHROPIC_API_BASE: ${ANTHROPIC_API_BASE:-https://api.anthropic.com}
       GENAI_PROVIDER: ${GENAI_PROVIDER:-copilot}
-      NOTARYMIND_OCR_MODEL: ${NOTARYMIND_OCR_MODEL:-github-copilot/claude-opus-4.8}
-      NOTARYMIND_INTERPRET_MODEL: ${NOTARYMIND_INTERPRET_MODEL:-github-copilot/haiku-4.5}
-      NOTARYMIND_MAP_MODEL: ${NOTARYMIND_MAP_MODEL:-github-copilot/haiku-4.5}
+      NOTARYMIND_OCR_MODEL: ${NOTARYMIND_OCR_MODEL:-github_copilot/claude-opus-4.8}
+      NOTARYMIND_INTERPRET_MODEL: ${NOTARYMIND_INTERPRET_MODEL:-github_copilot/haiku-4.5}
+      NOTARYMIND_MAP_MODEL: ${NOTARYMIND_MAP_MODEL:-github_copilot/haiku-4.5}
       GENAI_MAX_TOKENS: "12000"
     ports:
       - "8787:8787"

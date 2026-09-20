@@ -1,6 +1,6 @@
-# Glossary of Corrections — demo
+# Glossary of Corrections — My demo project
 
-Project created: 2026-09-19T00:16:31.448955+00:00
+Project created: 2026-09-20T17:37:04.195816+00:00
 
 Verified local corrections and knowledge used as reading context by OCR/GenAI and applied
 in memory by `build_docs_logical.py`. Source files in `metadata/` remain unchanged.
@@ -48,23 +48,3 @@ Useful person fields: name, variants, roles, gender, birth, death, alias, natura
 residencia, profession, burial, notes.
 
 Common relation attributes: filiation, marriage, kinship, affinity, godparent, descent,
-inheritance, sale, purchase, mortgage, debt, heir, executor, guardian, witness, other.
--->
-
-```json
-{
-  "identities": [],
-  "persons": [],
-  "relations": []
-}
-```
-
-## Project Notes
-
-- Project directory: `projects/demo`
-- Gender inference keywords: `gender_rules.json`
-- Consolidated output: `docs_logical.json`
-
-Add archive locations, recurring surnames, historical terminology, and other verified
-reading context here. OCR/GenAI should use these notes as guidance but must never invent
-facts from them.

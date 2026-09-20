@@ -25,7 +25,7 @@ python3 ../../skills/transcript/validate_docs.py projects/cotimos
 ### `ocr`: New/Reprocess Documents with GenAI
 
 **When:** New images added to `imported/` or need retranscription  
-**Model Required:** `github-copilot/claude-opus-4.8` (check before starting)
+**Model Required:** `github_copilot/claude-opus-4.8` (check before starting)
 
 **Visual OCR (read the image)**
 - GenAI reads photo or pdf → creates `metadata/<name>.json`
@@ -139,7 +139,7 @@ For EACH relation found in the document:
 5. **Never invent** — mark uncertain as `[?]`, illegible as `[illegible]`
 6. **Schema** — field names are English (genealogy, persons, relations, etc.)
 7. **Relation `attribute` field** — REQUIRED: use English type (filiation, sale, etc.), keep `relation` text in source language
-8. **Model:** Always verify `github-copilot/claude-opus-4.8` before OCR
+8. **Model:** Always verify `github_copilot/claude-opus-4.8` before OCR
 
 
 ---
@@ -614,7 +614,7 @@ If you're very unsure, omit the relation rather than guess.
     }
   ],
   "ocr_metadata": {
-    "genai_model": "github-copilot/claude-opus-4.8",
+    "genai_model": "github_copilot/claude-opus-4.8",
     "method": "visual_ocr|interpretation",
     "ocr_confidence": "high|medium|low",
     "status": "complete",

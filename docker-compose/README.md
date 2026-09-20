@@ -24,9 +24,9 @@ docker run --rm \
   --env PORT=8787 \
   --env GENAI_PROVIDER=copilot \
   --env GITHUB_COPILOT_API_BASE=https://api.githubcopilot.com \
-  --env NOTARYMIND_OCR_MODEL=github-copilot/claude-opus-4.8 \
-  --env NOTARYMIND_INTERPRET_MODEL=github-copilot/haiku-4.5 \
-  --env NOTARYMIND_MAP_MODEL=github-copilot/haiku-4.5 \
+  --env NOTARYMIND_OCR_MODEL=github_copilot/claude-opus-4.8 \
+  --env NOTARYMIND_INTERPRET_MODEL=github_copilot/haiku-4.5 \
+  --env NOTARYMIND_MAP_MODEL=github_copilot/haiku-4.5 \
   notarymindai:latest
 ```
 
@@ -48,9 +48,9 @@ GITHUB_COPILOT_API_BASE=https://api.githubcopilot.com
 OPENAI_API_BASE=https://api.openai.com
 ANTHROPIC_API_BASE=https://api.anthropic.com
 
-NOTARYMIND_OCR_MODEL=github-copilot/claude-opus-4.8
-NOTARYMIND_INTERPRET_MODEL=github-copilot/haiku-4.5
-NOTARYMIND_MAP_MODEL=github-copilot/haiku-4.5
+NOTARYMIND_OCR_MODEL=github_copilot/claude-opus-4.8
+NOTARYMIND_INTERPRET_MODEL=github_copilot/haiku-4.5
+NOTARYMIND_MAP_MODEL=github_copilot/haiku-4.5
 ```
 
 You can also set:

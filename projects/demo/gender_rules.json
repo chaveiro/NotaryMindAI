@@ -1,10 +1,62 @@
 {
   "gender_inference": {
     "enabled": true,
-    "description": "Infer gender from relations when explicit gender not available",
+    "description": "Infer gender from genealogical relations when explicit gender is not available.",
     "keywords": {
-      "female": [],
-      "male": []
+      "female": [
+        "filha",
+        "m\u00e3e",
+        "mulher",
+        "esposa",
+        "irm\u00e3",
+        "madrinha",
+        "vi\u00fava",
+        "sogra",
+        "nora",
+        "afilhada",
+        "divorciada",
+        "inventariada",
+        "solteira",
+        "daughter",
+        "mother",
+        "wife",
+        "sister",
+        "godmother",
+        "widow",
+        "mother-in-law",
+        "daughter-in-law",
+        "goddaughter",
+        "divorced woman",
+        "female heir",
+        "single woman"
+      ],
+      "male": [
+        "filho",
+        "pai",
+        "marido",
+        "esposo",
+        "irm\u00e3o",
+        "padrinho",
+        "vi\u00favo",
+        "sogro",
+        "genro",
+        "afilhado",
+        "divorciado",
+        "inventariado",
+        "solteiro",
+        "son",
+        "father",
+        "husband",
+        "brother",
+        "godfather",
+        "widower",
+        "father-in-law",
+        "son-in-law",
+        "godson",
+        "divorced man",
+        "male heir",
+        "single man"
+      ]
     }
   }
 }

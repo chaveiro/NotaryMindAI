@@ -16,7 +16,7 @@ Convert photographs and PDFs of historical manuscripts into **structured, valida
 - ✅ Clear segregation: verified data vs. structural template
 - ✅ Policy: **Never invent** — leave empty if uncertain
 
-> ⚠️ **OCR requires `github-copilot/claude-opus-4.8`**
+> ⚠️ **OCR requires `github_copilot/claude-opus-4.8`**
 > Weak models produce poor transcriptions. Always verify the active model before running OCR (`ocr` mode), 
 > interpretation (`interpret` mode), or map generation (`map` mode). Register model used in `ocr_metadata.genai_model`.
 >
