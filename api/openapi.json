@@ -1,0 +1,183 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "NotaryMindAI API",
+    "version": "2.0.0",
+    "description": "Project management, document processing, validation, and read-only archive queries."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8787"
+    }
+  ],
+  "paths": {
+    "/api/openapi.json": {
+      "get": {
+        "summary": "Read the machine-readable API contract",
+        "responses": {
+          "200": {
+            "description": "OpenAPI specification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "summary": "List projects",
+        "responses": {
+          "200": {
+            "description": "Project summaries",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ProjectList"}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a project",
+        "requestBody": {"$ref": "#/components/requestBodies/ProjectCreate"},
+        "responses": {
+          "200": {"description": "Project created"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "409": {"description": "Project already exists"}
+        }
+      }
+    },
+    "/api/projects/{name}": {
+      "parameters": [{"$ref": "#/components/parameters/ProjectName"}],
+      "delete": {
+        "summary": "Delete a project",
+        "responses": {
+          "200": {"description": "Project deleted"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/projects/{name}/data": {
+      "parameters": [{"$ref": "#/components/parameters/ProjectName"}],
+      "get": {
+        "summary": "Read consolidated project data",
+        "responses": {
+          "200": {"description": "Project data"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/projects/{name}/details": {
+      "parameters": [{"$ref": "#/components/parameters/ProjectName"}],
+      "get": {
+        "summary": "Read project readiness details",
+        "responses": {
+          "200": {"description": "Project details"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/projects/{name}/upload": {
+      "parameters": [{"$ref": "#/components/parameters/ProjectName"}],
+      "post": {
+        "summary": "Upload source documents",
+        "requestBody": {"$ref": "#/components/requestBodies/Upload"},
+        "responses": {
+          "200": {"description": "Upload result"},
+          "400": {"$ref": "#/components/responses/BadRequest"}
+        }
+      }
+    },
+    "/api/projects/{name}/process": {
+      "parameters": [{"$ref": "#/components/parameters/ProjectName"}],
+      "post": {
+        "summary": "Run a named processing operation",
+        "description": "The API invokes workflow_runner/runner.py directly for ocr, reinterpret, and map. Model selection is internal to the runner and may still use model-related environment variables.",
+        "requestBody": {"$ref": "#/components/requestBodies/Process"},
+        "responses": {
+          "200": {"description": "Processing completed"},
+          "422": {"description": "Processing failed"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/api/projects/{name}/tools": {
+      "parameters": [{"$ref": "#/components/parameters/ProjectName"}],
+      "post": {
+        "summary": "Run a read-only quality report",
+        "requestBody": {"$ref": "#/components/requestBodies/Tool"},
+        "responses": {
+          "200": {"description": "Report result"},
+          "400": {"$ref": "#/components/responses/BadRequest"}
+        }
+      }
+    },
+    "/api/projects/{name}/file/{fileName}": {
+      "parameters": [
+        {"$ref": "#/components/parameters/ProjectName"},
+        {"$ref": "#/components/parameters/FileName"}
+      ],
+      "get": {"summary": "Read an editable project file", "responses": {"200": {"description": "File content"}}},
+      "put": {"summary": "Write an editable project file", "responses": {"200": {"description": "File saved"}, "400": {"$ref": "#/components/responses/BadRequest"}}}
+    },
+    "/api/projects/{name}/raw": {
+      "parameters": [
+        {"$ref": "#/components/parameters/ProjectName"},
+        {"$ref": "#/components/parameters/ProjectPath"}
+      ],
+      "get": {
+        "summary": "Read a file within a project directory",
+        "responses": {
+          "200": {"description": "Requested file content"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
+    "/api/projects/{name}/glossary": {
+      "parameters": [{"$ref": "#/components/parameters/ProjectName"}],
+      "get": {"summary": "Read the project glossary", "responses": {"200": {"description": "Glossary content"}}},
+      "put": {"summary": "Write the project glossary", "responses": {"200": {"description": "Glossary saved"}, "400": {"$ref": "#/components/responses/BadRequest"}}}
+    },
+    "/api/agent/query": {
+      "post": {
+        "summary": "Query project data without writes",
+        "requestBody": {"$ref": "#/components/requestBodies/AgentQuery"},
+        "responses": {
+          "200": {"description": "Query results"},
+          "400": {"$ref": "#/components/responses/BadRequest"}
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ProjectName": {"name": "name", "in": "path", "required": true, "schema": {"type": "string"}},
+      "FileName": {"name": "fileName", "in": "path", "required": true, "schema": {"type": "string"}},
+      "ProjectPath": {"name": "path", "in": "query", "required": true, "schema": {"type": "string"}}
+    },
+    "requestBodies": {
+      "ProjectCreate": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string"}, "displayName": {"type": "string"}}}}}},
+      "Upload": {"required": true, "content": {"multipart/form-data": {"schema": {"type": "object", "properties": {"files": {"type": "array", "items": {"type": "string", "format": "binary"}}}}}}},
+      "Process": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["mode"], "properties": {"mode": {"type": "string", "enum": ["ocr", "reinterpret", "build", "map", "validate-docs"]}}}}}},
+      "Tool": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["tool"], "properties": {"tool": {"type": "string"}}}}}},
+      "AgentQuery": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["question"], "properties": {"project": {"type": "string", "default": "cotimos"}, "question": {"type": "string"}}}}}}
+    },
+    "responses": {
+      "BadRequest": {"description": "Invalid request"},
+      "NotFound": {"description": "Project or resource not found"},
+      "InternalServerError": {"description": "Server-side failure"}
+    },
+    "schemas": {
+      "ProjectList": {"type": "object", "required": ["projects"], "properties": {"projects": {"type": "array", "items": {"type": "object"}}}}
+    }
+  }
+}

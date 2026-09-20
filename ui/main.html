@@ -322,28 +322,17 @@ const svg=document.getElementById("svg"), wrap=document.getElementById("wrap"), 
 let CONFIG = null;
 let NODE_W, NODE_H, CAT_COLOR, CAT_LABEL, SEXO_FILL;
 
-// Helper to load schema.json from multiple sources (piclaw or static server)
+// Helper to load schema.json from the local app or static server
 async function loadConfigFromCandidates() {
-  const schemaCandidates = [
-    RAW('NotaryMindAi/ui/schema.json'),  // piclaw: /workspace/raw?path=...
-    '../ui/schema.json',                 // static server: from NotaryMindAi root
-    'schema.json'                        // relative: from current page location
-  ];
-  
-  for (const url of schemaCandidates) {
-    try {
-      const response = await fetch(url);
-      if (response.ok) {
-        const config = await response.json();
-        SCHEMA = config;
-        console.log(`✅ Config loaded from: ${url}`);
-        return config;
-      }
-    } catch(e) {
-      // Try next candidate
-    }
+  const url = '../ui/schema.json';
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Could not load schema.json from ${url}`);
   }
-  throw new Error(`Could not load schema.json from any source: ${schemaCandidates.join(', ')}`);
+  const config = await response.json();
+  SCHEMA = config;
+  console.log(`✅ Config loaded from: ${url}`);
+  return config;
 }
 
 async function loadConfig() {
@@ -431,12 +420,9 @@ const rowYs=[];                    // linhas-guia (genealogia)
 const params = new URLSearchParams(window.location.search);
 const PROJECT_NAME = params.get("project") || "cotimos";  // default: cotimos
 let LOADED_PROJECT_NAME = PROJECT_NAME;
-const PROJECT_BASE = `NotaryMindAi/projects/${PROJECT_NAME}`;
-
-// links (piclaw serve o workspace por HTTP; abrir em nova tab)
-const RAW=p=>`/workspace/raw?path=${encodeURIComponent(p)}&download=1`;
-const imgUrl=img=>RAW(`${PROJECT_BASE}/imported/`+img);
-const jsonUrl=img=>RAW(`${PROJECT_BASE}/metadata/`+img.replace(/\.jpg$/i,".json"));
+const PROJECT_BASE = `../projects/${PROJECT_NAME}`;
+const imgUrl=img=>`${PROJECT_BASE}/imported/`+img;
+const jsonUrl=img=>`${PROJECT_BASE}/metadata/`+img.replace(/\.jpg$/i,".json");
 function openImageViewer(imgPath, allImages=[], currentIdx=0){
   const modal=document.createElement("div");
   modal.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:2000;display:flex;align-items:stretch;justify-content:flex-start;flex-direction:row;padding:20px;gap:20px";
@@ -764,12 +750,10 @@ function mkEdge(gE,gHit,edges,d,color,dash,ds,wGen,arrow){
   gE.appendChild(vis); gHit.appendChild(hit); edges.push(vis,hit); return vis; }
 
 // ---------- carregar ----------
-// O JSON é servido pelo piclaw em /workspace/raw?path=... (relativo à origem atual).
-// Fallbacks para serviço estático simples (python -m http.server) ou file:// via HTTP.
+// O JSON é servido pelo servidor local relativo à página atual.
 let CURRENT_SOURCE = "docs_logical.json";
 const CANDIDATES=[
-  RAW(`${PROJECT_BASE}/docs_logical.json`),
-  `../projects/${PROJECT_NAME}/docs_logical.json`,  // static server from NotaryMindAi root
+  `${PROJECT_BASE}/docs_logical.json`,
   `docs_logical.json`
 ];
 
@@ -826,16 +810,8 @@ function updateDocDetailsHeader(imageName) {
 
 async function loadTranscriptionForImage(imageName) {
   try {
-    // Tentar /workspace/raw primeiro (mais confiável)
-    let jsonPath = RAW(`${PROJECT_BASE}/metadata/${imageName.replace(/\.jpg$/i, ".json")}`);
-    let response = await fetch(jsonPath);
-    
-    // Se falhar, tentar path relativo
-    if(!response.ok) {
-      jsonPath = `../../projects/${PROJECT_NAME}/metadata/${imageName.replace(/\.jpg$/i, ".json")}`; 
-      response = await fetch(jsonPath);
-    }
-
+    const jsonPath = `${PROJECT_BASE}/metadata/${imageName.replace(/\.jpg$/i, ".json")}`;
+    const response = await fetch(jsonPath);
     if(!response.ok) return "Transcript not available";
     const data = await response.json();
     const txt = data.full_transcript || "No transcript"; console.log("✓ Transcript loaded para", imageName, txt.length, "chars"); return txt;

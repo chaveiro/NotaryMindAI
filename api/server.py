@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-NotaryMindAi — Standalone API server (agnostic: runs with or without piclaw)
+NotaryMindAi — Standalone API server
 
 Provides a simple HTTP API for the web portal:
   - GET  /api/projects                     list projects
@@ -27,6 +27,7 @@ import re
 import shutil
 import subprocess
 import unicodedata
+import sys
 from pathlib import Path
 from urllib.parse import quote, unquote
 from flask import Flask, request, jsonify, send_from_directory, send_file
@@ -41,9 +42,10 @@ PROJECTS_DIR = ROOT / "projects"
 UI_DIR = ROOT / "ui"
 GLOSSARY_TEMPLATE_PATH = ROOT / "skills/transcript/GLOSSARY-TEMPLATE.md"
 GENDER_RULES_TEMPLATE_PATH = ROOT / "skills/transcript/GENDER-RULES-TEMPLATE.json"
+OPENAPI_PATH = ROOT / "api/openapi.json"
 PORT = int(os.environ.get("PORT", 8787))
-GENAI_MODEL = "github-copilot/claude-opus-4.8"
 SUPPORTED_IMPORT_SUFFIXES = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf")
+WORKFLOW_RUNNER = ROOT / "workflow_runner/runner.py"
 
 # ========== Helpers ==========
 
@@ -335,6 +337,15 @@ def agent_query(project: str, question: str) -> dict:
 
 # ========== Routes ==========
 
+@app.route("/api/openapi.json", methods=["GET"])
+def api_openapi():
+    """Return the machine-readable API contract."""
+    try:
+        with OPENAPI_PATH.open(encoding="utf-8") as handle:
+            return jsonify(json.load(handle))
+    except (OSError, json.JSONDecodeError):
+        return jsonify({"error": "OpenAPI specification is unavailable"}), 500
+
 @app.route("/api/projects", methods=["GET"])
 def api_list_projects():
     """List all projects."""
@@ -525,15 +536,7 @@ def api_project_process(name):
             ["python3", str(ROOT / "skills/transcript/validate_docs.py"), str(project_dir)],
         ]
     else:
-        runner = os.environ.get("NOTARYMIND_GENAI_RUNNER", "").strip()
-        if not runner:
-            return jsonify({
-                "error": "GenAI processing is not configured on the server",
-                "mode": mode,
-                "model": GENAI_MODEL,
-                "hint": "Set NOTARYMIND_GENAI_RUNNER to an executable that accepts: <mode> <project_path> <model>.",
-            }), 503
-        commands = [[runner, mode, str(project_dir), GENAI_MODEL]]
+        commands = [[sys.executable, str(WORKFLOW_RUNNER), mode, str(project_dir)]]
 
     output = []
     try:
@@ -545,7 +548,7 @@ def api_project_process(name):
     except (OSError, subprocess.TimeoutExpired) as error:
         return jsonify({"error": str(error), "mode": mode}), 500
 
-    return jsonify({"ok": True, "mode": mode, "model": GENAI_MODEL if mode != "build" else None, "output": "\n".join(output)})
+    return jsonify({"ok": True, "mode": mode, "output": "\n".join(output)})
 
 
 @app.route("/api/projects/<name>/tools", methods=["POST"])

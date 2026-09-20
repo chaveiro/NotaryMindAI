@@ -26,6 +26,7 @@ test_endpoint() {
     local method="$2"
     local endpoint="$3"
     local data="$4"
+    local expected_code="${5:-2xx}"
     
     test_count=$((test_count + 1))
     echo -n "[$test_count] $name ... "
@@ -42,10 +43,10 @@ test_endpoint() {
     http_code=$(echo "$response" | tail -1)
     body=$(echo "$response" | head -n -1)
     
-    if [[ "$http_code" =~ ^[2][0-9]{2}$ ]]; then
+    if [[ "$expected_code" == "2xx" && "$http_code" =~ ^[2][0-9]{2}$ ]] || [[ "$expected_code" != "2xx" && "$http_code" =~ ^(${expected_code})$ ]]; then
         echo -e "${GREEN}✓${NC} (HTTP $http_code)"
         pass_count=$((pass_count + 1))
-        if echo "$body" | grep -q "error"; then
+        if [[ "$expected_code" != "2xx" ]] && echo "$body" | grep -q '"error"'; then
             echo "  ⚠️  Response contains error field: $body" | head -c 100
             echo
         fi
@@ -65,18 +66,18 @@ echo
 echo "=== 2. Projects Management ==="
 test_endpoint "List projects" "GET" "/api/projects"
 test_endpoint "Create test project" "POST" "/api/projects" \
-    '{"name":"test_api_project_001","displayName":"API Test"}'
+    '{"name":"test_api_project_001","displayName":"API Test"}' '200|409'
 test_endpoint "Create duplicate (should fail)" "POST" "/api/projects" \
-    '{"name":"test_api_project_001","displayName":"Duplicate"}'
+    '{"name":"test_api_project_001","displayName":"Duplicate"}' 409
 test_endpoint "Create with invalid name (should fail)" "POST" "/api/projects" \
-    '{"name":"../../../etc/passwd","displayName":"Hack"}'
+    '{"name":"../../../etc/passwd","displayName":"Hack"}' 400
 echo
 
 # File operations
 echo "=== 3. File Operations ==="
 test_endpoint "Get project data (cotimos)" "GET" "/api/projects/cotimos/data"
 test_endpoint "Read metadata file" "GET" "/api/projects/cotimos/raw?path=docs_logical.json"
-test_endpoint "Read nonexistent file (should fail)" "GET" "/api/projects/cotimos/raw?path=nonexistent.json"
+test_endpoint "Read nonexistent file (should fail)" "GET" "/api/projects/cotimos/raw?path=nonexistent.json" "" 404
 echo
 
 # Agent query
@@ -84,7 +85,7 @@ echo "=== 4. Query-Only Agent ==="
 test_endpoint "Query: Bernardo Dias" "POST" "/api/agent/query" \
     '{"project":"cotimos","question":"Bernardo Dias"}'
 test_endpoint "Query: empty question (should fail)" "POST" "/api/agent/query" \
-    '{"project":"cotimos","question":""}'
+    '{"project":"cotimos","question":""}' 400
 test_endpoint "Query: nonexistent project" "POST" "/api/agent/query" \
     '{"project":"nonexistent","question":"test"}'
 echo

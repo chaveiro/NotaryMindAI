@@ -91,11 +91,10 @@ schema.json (configuration)
 └─ ui_strings: {nav_buttons, buttons, status, labels, ...} (50+ strings)
 ```
 
-### Configuration Loading (in order of preference)
+### Configuration Loading
 
-1. **PiClaw (production)** → `/piclaw/api/workspace-file?path=.../ui/schema.json`
-2. **Relative path (static server)** → `./schema.json`
-3. **Fallback** → Hard-coded defaults in main.html
+1. **Relative path** → `../ui/schema.json`
+2. **Fallback** → Hard-coded defaults in main.html
 
 ```javascript
 async function loadConfigFromCandidates() {
@@ -666,7 +665,6 @@ Source: "glossary"          → Short dash (dash="2 4")
 - Local or network JSON file access
 
 ### Server
-- **PiClaw:** Built-in HTTP server (no setup needed)
 - **Static:** `python3 -m http.server 8000` or equivalent
 
 ### Files
@@ -695,8 +693,7 @@ Source: "glossary"          → Short dash (dash="2 4")
    - Edit file in text editor
 
 3. **Reload page**
-   - Browser: Ctrl+R (normal) or Ctrl+Shift+R (hard)
-   - PiClaw: Open URL, reload
+  - Browser: Ctrl+R (normal) or Ctrl+Shift+R (hard)
 
 4. **Verify**
    - Open browser DevTools (F12)

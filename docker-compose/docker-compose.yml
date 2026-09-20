@@ -1,0 +1,26 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker-compose/Dockerfile
+    container_name: notarymindai-api
+    working_dir: /workspace
+    environment:
+      PORT: "8787"
+      FLASK_ENV: production
+      PYTHONUNBUFFERED: "1"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-https://api.githubcopilot.com}
+      ANTHROPIC_API_BASE: ${ANTHROPIC_API_BASE:-https://api.anthropic.com}
+      GENAI_PROVIDER: ${GENAI_PROVIDER:-copilot}
+      NOTARYMIND_OCR_MODEL: ${NOTARYMIND_OCR_MODEL:-github-copilot/claude-opus-4.8}
+      NOTARYMIND_REINTERPRET_MODEL: ${NOTARYMIND_REINTERPRET_MODEL:-gpt-4o-mini}
+      NOTARYMIND_MAP_MODEL: ${NOTARYMIND_MAP_MODEL:-gpt-4o-mini}
+      GENAI_MAX_TOKENS: "12000"
+    ports:
+      - "8787:8787"
+    volumes:
+      - ..:/workspace:rw
+    command: python3 api/server.py
+    restart: unless-stopped
