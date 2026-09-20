@@ -24,7 +24,7 @@ The runner normalizes them internally for the provider runtime.
 The API invokes the runner without a model argument:
 
 ```bash
-python3 -m workflow_runner ocr projects/demo_project
+python3 workflow_runner/runner.py ocr projects/demo_project
 ```
 
 Model selection is internal. The precedence is `NOTARYMIND_<OPERATION>_MODEL`,
@@ -40,7 +40,7 @@ export GENAI_PROVIDER=copilot
 export OPENAI_API_KEY="your-copilot-token"
 export OPENAI_API_BASE="https://api.githubcopilot.com"
 export NOTARYMIND_OCR_MODEL="github-copilot/claude-opus-4.8"
-python3 -m workflow_runner ocr projects/demo_project
+python3 workflow_runner/runner.py ocr projects/demo_project
 ```
 
 ### LM Studio
@@ -49,7 +49,7 @@ python3 -m workflow_runner ocr projects/demo_project
 export GENAI_PROVIDER=lmstudio
 export OPENAI_API_KEY="lm-studio"
 export OPENAI_API_BASE="http://localhost:1234/v1"
-python3 -m workflow_runner ocr projects/demo_project local-model
+python3 workflow_runner/runner.py ocr projects/demo_project local-model
 ```
 
 ### Anthropic Claude
@@ -58,7 +58,7 @@ python3 -m workflow_runner ocr projects/demo_project local-model
 export GENAI_PROVIDER=anthropic
 export ANTHROPIC_API_KEY="your-key"
 export ANTHROPIC_API_BASE="https://api.anthropic.com"
-python3 -m workflow_runner ocr projects/demo_project claude-opus-4.8
+python3 workflow_runner/runner.py ocr projects/demo_project claude-opus-4.8
 ```
 
 ## Model aliases

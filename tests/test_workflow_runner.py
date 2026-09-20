@@ -15,9 +15,9 @@ from workflow_runner.runner import (
 
 
 class WorkflowRunnerCliTests(unittest.TestCase):
-    def test_module_entrypoint_usage(self):
+    def test_script_entrypoint_usage(self):
         result = subprocess.run(
-            [sys.executable, "-m", "workflow_runner"],
+            [sys.executable, str(ROOT / "workflow_runner/runner.py")],
             cwd=str(ROOT),
             capture_output=True,
             text=True,

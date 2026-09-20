@@ -32,7 +32,6 @@ jobs:
           python -m py_compile
           api/server.py
           workflow_runner/runner.py
-          workflow_runner/__main__.py
           skills/transcript/build_docs_logical.py
           skills/transcript/validate_docs.py
           skills/transcript/validate_map.py
