@@ -8,6 +8,7 @@ Operations: ocr, reinterpret, map
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import mimetypes
 import os
@@ -29,6 +30,7 @@ MODEL_ALIASES = {
     "claude-opus-4.8": "anthropic/claude-opus-4-1-20250805",
     "claude-opus-4.1": "anthropic/claude-opus-4-1-20250805",
     "haiku-4.5": "anthropic/claude-3-5-haiku-latest",
+    "github-copilot/claude-opus-4.8": "github_copilot/claude-opus-4.8",
     "copilot-gpt-4.1": "openai/gpt-4.1",
     "copilot-gpt-4o": "openai/gpt-4o",
     "gpt-4.1": "openai/gpt-4.1",
@@ -42,20 +44,64 @@ class RunnerError(RuntimeError):
 
 class ProjectLock:
     def __init__(self, project: Path):
-        self.path = project / ".workflow_runner.lock"
+        self.project = project.resolve()
+        project_id = hashlib.sha1(str(self.project).encode("utf-8")).hexdigest()[:12]
+        self.path = Path(tempfile.gettempdir()) / f"notarymindai-workflow-{self.project.name}-{project_id}.lock"
+
+    def _write_owner(self) -> None:
+        self.path.write_text(json.dumps({"pid": os.getpid()}), encoding="utf-8")
+
+    def _is_running(self, pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
+    def _stale(self) -> bool:
+        if not self.path.exists():
+            return True
+        try:
+            owner = json.loads(self.path.read_text(encoding="utf-8"))
+            pid = int(owner.get("pid", 0))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            return True
+        if pid <= 0:
+            return True
+        return not self._is_running(pid)
+
+    def _clear(self) -> None:
+        try:
+            self.path.unlink()
+        except FileNotFoundError:
+            pass
 
     def __enter__(self):
         try:
-            self.path.mkdir()
+            lock_fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(lock_fd)
         except FileExistsError as error:
-            raise RunnerError(f"Project is already being processed: {self.path.parent.name}") from error
+            if not self._stale():
+                raise RunnerError(
+                    f"Project '{self.project.name}' is already being processed. "
+                    f"Project path: {self.project}. Temporary lock file: {self.path}"
+                ) from error
+            self._clear()
+            try:
+                lock_fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.close(lock_fd)
+            except FileExistsError as retry_error:
+                raise RunnerError(
+                    f"Project '{self.project.name}' is already being processed. "
+                    f"Project path: {self.project}. Temporary lock file: {self.path}"
+                ) from retry_error
+        self._write_owner()
         return self
 
     def __exit__(self, *_args):
-        try:
-            self.path.rmdir()
-        except OSError:
-            pass
+        self._clear()
 
 
 def env_name(operation: str) -> str:
@@ -76,7 +122,7 @@ def normalize_model_name(model: str) -> str:
     if "/" in raw:
         return raw
     alias = MODEL_ALIASES.get(raw, raw)
-    if alias.startswith("anthropic/") or alias.startswith("openai/") or alias.startswith("deepseek/"):
+    if alias.startswith(("anthropic/", "openai/", "deepseek/", "azure/", "vertex_ai/", "bedrock/", "ollama/", "ollama_chat/", "github_copilot/")):
         return alias
     if raw.startswith("claude"):
         return f"anthropic/{raw}"
@@ -87,18 +133,89 @@ def normalize_model_name(model: str) -> str:
     return f"openai/{raw}"
 
 
+def _copilot_device_auth_details() -> dict[str, str]:
+    try:
+        from litellm.llms.github_copilot.authenticator import Authenticator
+
+        info = Authenticator()._get_device_code()
+    except Exception:
+        return {"verification_uri": "https://github.com/login/device", "user_code": "", "device_code": ""}
+
+    verification_uri = str(info.get("verification_uri") or "https://github.com/login/device")
+    user_code = str(info.get("user_code") or "")
+    device_code = str(info.get("device_code") or "")
+    return {"verification_uri": verification_uri, "user_code": user_code, "device_code": device_code}
+
+
+def _copilot_login_text() -> str:
+    details = _copilot_device_auth_details()
+    verification_uri = details.get("verification_uri", "https://github.com/login/device")
+    user_code = details.get("user_code", "")
+    if user_code:
+        return f"Please visit {verification_uri} and enter code {user_code} to authenticate."
+    return f"Please visit {verification_uri} to authenticate."
+
+
 def build_runtime_config(model: str) -> dict[str, Any]:
     normalized = normalize_model_name(model)
     provider_hint = os.environ.get("GENAI_PROVIDER", "openai").strip().lower()
+    request_kwargs: dict[str, Any] = {}
 
     if normalized.startswith("anthropic/"):
         provider = "anthropic"
         api_key_name = "ANTHROPIC_API_KEY"
         api_base = os.environ.get("ANTHROPIC_API_BASE", os.environ.get("ANTHROPIC_BASE_URL", DEFAULT_ANTHROPIC_BASE)).rstrip("/")
-    elif provider_hint in {"copilot", "githubcopilot"} or normalized.startswith(("copilot/", "github-copilot/")):
+    elif provider_hint in {"azure", "azure_openai", "azure-openai"} or normalized.startswith("azure/"):
+        provider = "azure"
+        api_key_name = "AZURE_API_KEY"
+        api_base = os.environ.get("AZURE_API_BASE", "").rstrip("/")
+        api_version = os.environ.get("AZURE_API_VERSION", "").strip()
+        if api_version:
+            request_kwargs["api_version"] = api_version
+        if not normalized.startswith("azure/"):
+            normalized = f"azure/{normalized.split('/', 1)[-1]}"
+    elif provider_hint in {"vertex", "vertex_ai", "vertexai"} or normalized.startswith("vertex_ai/"):
+        provider = "vertex_ai"
+        api_key_name = ""
+        api_base = ""
+        vertex_project = os.environ.get("VERTEXAI_PROJECT", os.environ.get("VERTEX_PROJECT", "")).strip()
+        vertex_location = os.environ.get("VERTEXAI_LOCATION", os.environ.get("VERTEX_LOCATION", "")).strip()
+        if vertex_project:
+            request_kwargs["vertex_project"] = vertex_project
+        if vertex_location:
+            request_kwargs["vertex_location"] = vertex_location
+        if not normalized.startswith("vertex_ai/"):
+            normalized = f"vertex_ai/{normalized.split('/', 1)[-1]}"
+    elif provider_hint in {"bedrock", "aws", "amazon-bedrock"} or normalized.startswith("bedrock/"):
+        provider = "bedrock"
+        api_key_name = ""
+        api_base = ""
+        aws_region = os.environ.get("AWS_REGION_NAME", os.environ.get("AWS_REGION", "")).strip()
+        if aws_region:
+            request_kwargs["aws_region_name"] = aws_region
+        aws_access_key_id = os.environ.get("AWS_ACCESS_KEY_ID", "").strip()
+        aws_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY", "").strip()
+        aws_session_token = os.environ.get("AWS_SESSION_TOKEN", "").strip()
+        if aws_access_key_id:
+            request_kwargs["aws_access_key_id"] = aws_access_key_id
+        if aws_secret_access_key:
+            request_kwargs["aws_secret_access_key"] = aws_secret_access_key
+        if aws_session_token:
+            request_kwargs["aws_session_token"] = aws_session_token
+        if not normalized.startswith("bedrock/"):
+            normalized = f"bedrock/{normalized.split('/', 1)[-1]}"
+    elif provider_hint in {"ollama"} or normalized.startswith(("ollama/", "ollama_chat/")):
+        provider = "ollama"
+        api_key_name = ""
+        api_base = os.environ.get("OLLAMA_API_BASE", os.environ.get("OPENAI_API_BASE", "http://localhost:11434")).rstrip("/")
+        if not normalized.startswith(("ollama/", "ollama_chat/")):
+            normalized = f"ollama_chat/{normalized.split('/', 1)[-1]}"
+    elif provider_hint in {"copilot", "githubcopilot", "github_copilot"} or normalized.startswith(("copilot/", "github-copilot/", "github_copilot/")):
         provider = "copilot"
-        api_key_name = "OPENAI_API_KEY"
-        api_base = os.environ.get("OPENAI_API_BASE", os.environ.get("OPENAI_BASE_URL", COPILOT_API_BASE)).rstrip("/")
+        api_key_name = ""
+        api_base = os.environ.get("GITHUB_COPILOT_API_BASE", os.environ.get("OPENAI_API_BASE", os.environ.get("OPENAI_BASE_URL", COPILOT_API_BASE))).rstrip("/")
+        if normalized.startswith("github-copilot/"):
+            normalized = "github_copilot/" + normalized.split("/", 1)[1]
     elif provider_hint in {"lmstudio", "local"}:
         provider = "openai"
         api_key_name = "OPENAI_API_KEY"
@@ -117,6 +234,7 @@ def build_runtime_config(model: str) -> dict[str, Any]:
         "api_key_name": api_key_name,
         "api_key": os.environ.get(api_key_name, "").strip(),
         "api_base": api_base,
+        "request_kwargs": request_kwargs,
     }
 
 
@@ -248,18 +366,26 @@ def _request_json(messages: list[dict[str, Any]], model: str, image: Path | None
     config = build_runtime_config(model)
     provider = config["provider"]
 
-    if not config["api_key"]:
+    if config["api_key_name"] and not config["api_key"]:
         raise RunnerError(f"{config['api_key_name']} is not configured")
 
     try:
+        completion_kwargs: dict[str, Any] = {
+            "model": config["model"],
+            "messages": _litellm_payload(messages, image, provider),
+            "temperature": 0,
+            "max_tokens": int(os.environ.get("GENAI_MAX_TOKENS", "12000")),
+        }
+        if config["api_key"]:
+            completion_kwargs["api_key"] = config["api_key"]
+        if config["api_base"]:
+            completion_kwargs["api_base"] = config["api_base"]
+        if provider != "anthropic":
+            completion_kwargs["response_format"] = {"type": "json_object"}
+        completion_kwargs.update(config.get("request_kwargs", {}))
+
         response = litellm.completion(
-            model=config["model"],
-            messages=_litellm_payload(messages, image, provider),
-            api_key=config["api_key"],
-            api_base=config["api_base"],
-            temperature=0,
-            max_tokens=int(os.environ.get("GENAI_MAX_TOKENS", "12000")),
-            response_format={"type": "json_object"} if provider != "anthropic" else None,
+            **completion_kwargs,
         )
         return _json_from_text(_extract_text(response))
     except Exception as error:  # pragma: no cover
@@ -391,10 +517,18 @@ def main() -> int:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return 1 if summary.get("failed") else 0
     except RunnerError as error:
-        print(json.dumps({"ok": False, "operation": operation, "error": str(error)}, ensure_ascii=False), file=sys.stderr)
+        message = str(error)
+        hint = message if "Please visit" in message or "GitHub Copilot" in message else ""
+        print(
+            json.dumps({"ok": False, "operation": operation, "error": message, "hint": hint}, ensure_ascii=False),
+            file=sys.stderr,
+        )
         return 1
     except Exception as error:
-        print(json.dumps({"ok": False, "operation": operation, "error": f"unexpected runner error: {error}"}, ensure_ascii=False), file=sys.stderr)
+        print(
+            json.dumps({"ok": False, "operation": operation, "error": f"unexpected runner error: {error}", "hint": ""}, ensure_ascii=False),
+            file=sys.stderr,
+        )
         return 1
 
 

@@ -1862,6 +1862,20 @@ const setupSourceModal = () => {
     }
     throw new Error(`API unavailable (${failures.join("; ")})`);
   };
+  const apiStreamFetch = async (path, options = {}) => {
+    const failures = [];
+    for(const base of API_BASES) {
+      try {
+        const response = await fetch(`${base}${path}`, options);
+        const contentType = response.headers.get("content-type") || "";
+        if(response.ok && contentType.includes("text/event-stream")) return response;
+        failures.push(`${base || "same origin"}: returned ${contentType || "unknown content"}`);
+      } catch(error) {
+        failures.push(`${base || "same origin"}: ${error.message}`);
+      }
+    }
+    throw new Error(`API unavailable (${failures.join("; ")})`);
+  };
   let projectsCache = [];
 
   const archiveName = document.getElementById("archiveName");
@@ -2180,10 +2194,60 @@ const setupSourceModal = () => {
       document.getElementById("projectActionStatusWrap").style.display = "block";
       status.textContent = "Processing…";
       button.disabled = true;
+      const appendStreamText = (text) => {
+        if(!text) return;
+        const current = status.textContent || "";
+        const prefix = current && !current.endsWith("\n") ? "\n" : "";
+        status.textContent = `${current}${prefix}${text}`;
+        status.scrollTop = status.scrollHeight;
+      };
       try {
-        const resp = await apiFetch(`/api/projects/${project}/process`, {
-          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({mode})
+        const resp = await apiStreamFetch(`/api/projects/${project}/process`, {
+          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({mode, stream: true})
         });
+        if(resp.headers.get("content-type")?.includes("text/event-stream")) {
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while(true) {
+            const {value, done} = await reader.read();
+            if(done) break;
+            buffer += decoder.decode(value, {stream: true});
+            const parts = buffer.split("\n\n");
+            buffer = parts.pop() || "";
+            for(const part of parts) {
+              const line = part.trim();
+              if(!line.startsWith("data:")) continue;
+              const payload = line.slice(5).trim();
+              if(!payload) continue;
+              try {
+                const event = JSON.parse(payload);
+                if(event.type === "log" && event.text) {
+                  appendStreamText(event.text);
+                } else if(event.type === "result") {
+                  if(event.status === "error") {
+                    appendStreamText(event.error || "Processing failed");
+                    throw new Error(event.error || "Processing failed");
+                  }
+                  if(event.exitCode !== undefined && event.exitCode !== 0) {
+                    appendStreamText(`Process exited with code ${event.exitCode}`);
+                    throw new Error(`Process exited with code ${event.exitCode}`);
+                  }
+                  if(!status.textContent || status.textContent === "Processing…") {
+                    status.textContent = `Mode ${mode.toUpperCase()} completed.`;
+                  }
+                }
+              } catch(e) {
+                if(e instanceof SyntaxError) continue;
+                throw e;
+              }
+            }
+          }
+          const projects = await fetchProjects();
+          await refreshAllProjectControls(projects, project);
+          return;
+        }
+
         const data = await resp.json();
         if(!resp.ok) throw new Error([data.error, data.hint, data.output].filter(Boolean).join("\n"));
         status.textContent = data.output || `Mode ${mode.toUpperCase()} completed.`;

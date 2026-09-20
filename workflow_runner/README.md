@@ -1,6 +1,6 @@
 # Workflow Runner
 
-The runner is intentionally small and easy to maintain. It keeps the project contract stable while abstracting the model/provider layer behind a single `LiteLLM`-style adapter.
+The runner is intentionally small and easy to maintain. It keeps the project contract stable while using `litellm` as a single provider adapter.
 
 ## Why this is simpler
 
@@ -31,15 +31,87 @@ Model selection is internal. The precedence is `NOTARYMIND_<OPERATION>_MODEL`,
 then `NOTARYMIND_GENAI_MODEL`, then the built-in default `claude-opus-4.8`.
 The optional CLI model argument remains available for direct/manual runs.
 
-## Provider examples
+## Provider Setup
 
-### Copilot
+GitHub Copilot credentials only apply to the `copilot` provider. For OpenAI, Anthropic,
+Vertex AI, Bedrock, Ollama, and Azure OpenAI you use that provider's own credentials or
+local runtime setup.
+
+### GitHub Copilot
+
+GitHub Copilot does not give you an `OPENAI_API_KEY`. `litellm` handles Copilot through
+its own authenticated GitHub Copilot flow. In practice, authenticate Copilot in your
+editor or environment first, then run the workflow runner with the Copilot provider.
 
 ```bash
 export GENAI_PROVIDER=copilot
-export OPENAI_API_KEY="your-copilot-token"
-export OPENAI_API_BASE="https://api.githubcopilot.com"
+export GITHUB_COPILOT_API_BASE="https://api.githubcopilot.com"
 export NOTARYMIND_OCR_MODEL="github-copilot/claude-opus-4.8"
+python3 workflow_runner/runner.py ocr projects/demo_project
+```
+
+If you are not already authenticated with GitHub Copilot, use one of the other providers
+below instead. This runner does not mint a Copilot token for you.
+
+### OpenAI
+
+```bash
+export GENAI_PROVIDER=openai
+export OPENAI_API_KEY="your-openai-key"
+export OPENAI_API_BASE="https://api.openai.com/v1"
+export NOTARYMIND_OCR_MODEL="openai/gpt-4.1"
+python3 workflow_runner/runner.py ocr projects/demo_project
+```
+
+### Anthropic
+
+```bash
+export GENAI_PROVIDER=anthropic
+export ANTHROPIC_API_KEY="your-anthropic-key"
+export ANTHROPIC_API_BASE="https://api.anthropic.com"
+export NOTARYMIND_OCR_MODEL="claude-opus-4.8"
+python3 workflow_runner/runner.py ocr projects/demo_project
+```
+
+### Azure OpenAI
+
+```bash
+export GENAI_PROVIDER=azure
+export AZURE_API_KEY="your-azure-openai-key"
+export AZURE_API_BASE="https://your-resource.openai.azure.com"
+export AZURE_API_VERSION="2024-10-21"
+export NOTARYMIND_OCR_MODEL="azure/gpt-4.1"
+python3 workflow_runner/runner.py ocr projects/demo_project
+```
+
+### Vertex AI
+
+```bash
+export GENAI_PROVIDER=vertex_ai
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
+export VERTEXAI_PROJECT="your-gcp-project"
+export VERTEXAI_LOCATION="us-central1"
+export NOTARYMIND_OCR_MODEL="vertex_ai/gemini-2.0-flash"
+python3 workflow_runner/runner.py ocr projects/demo_project
+```
+
+### Bedrock
+
+```bash
+export GENAI_PROVIDER=bedrock
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_REGION="us-east-1"
+export NOTARYMIND_OCR_MODEL="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0"
+python3 workflow_runner/runner.py ocr projects/demo_project
+```
+
+### Ollama
+
+```bash
+export GENAI_PROVIDER=ollama
+export OLLAMA_API_BASE="http://localhost:11434"
+export NOTARYMIND_OCR_MODEL="ollama_chat/llama3.1:8b"
 python3 workflow_runner/runner.py ocr projects/demo_project
 ```
 
@@ -52,14 +124,7 @@ export OPENAI_API_BASE="http://localhost:1234/v1"
 python3 workflow_runner/runner.py ocr projects/demo_project local-model
 ```
 
-### Anthropic Claude
 
-```bash
-export GENAI_PROVIDER=anthropic
-export ANTHROPIC_API_KEY="your-key"
-export ANTHROPIC_API_BASE="https://api.anthropic.com"
-python3 workflow_runner/runner.py ocr projects/demo_project claude-opus-4.8
-```
 
 ## Model aliases
 

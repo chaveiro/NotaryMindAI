@@ -36,6 +36,10 @@ python3 server.py
   ```bash
   PORT=9000 python3 server.py
   ```
+- `GENAI_PROVIDER` — Provider selection (`copilot`, `openai`, `anthropic`, `azure`, `vertex_ai`, `bedrock`, `ollama`, `lmstudio`)
+- `GITHUB_COPILOT_API_BASE` — Copilot base URL; default `https://api.githubcopilot.com`. This does not use `OPENAI_API_KEY`.
+- `OPENAI_API_KEY` / `OPENAI_API_BASE` — OpenAI-compatible provider settings
+- `ANTHROPIC_API_KEY` / `ANTHROPIC_API_BASE` — Anthropic provider settings
 - `NOTARYMIND_<OPERATION>_MODEL` or `NOTARYMIND_GENAI_MODEL` — Optional model overrides for the built-in workflow runner used by processing modes `ocr`, `reinterpret`, and `map`. Modes `build` and `validate-docs` run locally without model selection.
 
 When the UI is served separately, pass the API origin explicitly, for example:

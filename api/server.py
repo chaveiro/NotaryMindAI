@@ -30,7 +30,7 @@ import unicodedata
 import sys
 from pathlib import Path
 from urllib.parse import quote, unquote
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file, Response, stream_with_context
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -46,6 +46,62 @@ OPENAPI_PATH = ROOT / "api/openapi.json"
 PORT = int(os.environ.get("PORT", 8787))
 SUPPORTED_IMPORT_SUFFIXES = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf")
 WORKFLOW_RUNNER = ROOT / "workflow_runner/runner.py"
+
+def _extract_json_payload(text: str) -> dict:
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return {}
+    try:
+        payload = json.loads(cleaned)
+    except (TypeError, ValueError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _stream_process_output(command: list[str], cwd: Path):
+    process = subprocess.Popen(
+        command,
+        cwd=str(cwd),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        universal_newlines=True,
+    )
+    last_error = ""
+    last_hint = ""
+    try:
+        if process.stdout is None:
+            yield f"data: {json.dumps({'type': 'result', 'status': 'error', 'error': 'No runner output available'}, ensure_ascii=False)}\n\n"
+            return
+
+        for line in iter(process.stdout.readline, ""):
+            text = line.rstrip("\r\n")
+            if not text:
+                continue
+            payload = _extract_json_payload(text)
+            if payload:
+                if isinstance(payload.get("error"), str):
+                    last_error = payload.get("error", "")
+                if isinstance(payload.get("hint"), str):
+                    last_hint = payload.get("hint", "")
+                if payload.get("error") or payload.get("hint"):
+                    yield f"data: {json.dumps({'type': 'log', 'text': payload.get('hint') or payload.get('error') or text}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'log', 'text': text}, ensure_ascii=False)}\n\n"
+
+        return_code = process.wait()
+        result = {'type': 'result', 'status': 'ok' if return_code == 0 else 'error', 'exitCode': return_code}
+        if return_code != 0:
+            result['error'] = last_error or 'Processing failed'
+            if last_hint:
+                result['hint'] = last_hint
+        yield f"data: {json.dumps(result, ensure_ascii=False)}\n\n"
+    except Exception as exc:
+        yield f"data: {json.dumps({'type': 'result', 'status': 'error', 'error': str(exc)}, ensure_ascii=False)}\n\n"
+    finally:
+        if process.stdout is not None:
+            process.stdout.close()
+
 
 # ========== Helpers ==========
 
@@ -527,6 +583,9 @@ def api_project_process(name):
     if mode not in ("ocr", "reinterpret", "build", "map", "validate-docs"):
         return jsonify({"error": "Invalid processing mode"}), 400
 
+    body = request.get_json(silent=True) or {}
+    stream_requested = bool(body.get("stream"))
+
     if mode == "build":
         commands = [
             ["python3", str(ROOT / "skills/transcript/build_docs_logical.py"), str(project_dir)],
@@ -538,13 +597,28 @@ def api_project_process(name):
     else:
         commands = [[sys.executable, str(WORKFLOW_RUNNER), mode, str(project_dir)]]
 
+    if stream_requested:
+        command = commands[0]
+        return Response(stream_with_context(_stream_process_output(command, ROOT)), mimetype="text/event-stream")
+
     output = []
     try:
         for command in commands:
             result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=300, check=False)
-            output.append((result.stdout + result.stderr).strip())
+            combined = (result.stdout + result.stderr).strip()
+            output.append(combined)
             if result.returncode != 0:
-                return jsonify({"error": "Processing failed", "mode": mode, "output": "\n".join(output)}), 422
+                payload = {}
+                if combined:
+                    try:
+                        parsed = json.loads(combined)
+                        if isinstance(parsed, dict):
+                            payload = parsed
+                    except (TypeError, ValueError):
+                        pass
+                error_text = payload.get("error") or "Processing failed"
+                hint = payload.get("hint") or ""
+                return jsonify({"error": error_text, "hint": hint, "mode": mode, "output": payload.get("output") or "\n".join(output)}), 422
     except (OSError, subprocess.TimeoutExpired) as error:
         return jsonify({"error": str(error), "mode": mode}), 500
 
