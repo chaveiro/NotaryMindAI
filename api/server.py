@@ -580,7 +580,7 @@ def api_project_process(name):
         return jsonify({"error": "Project does not exist"}), 404
 
     mode = (request.get_json(silent=True) or {}).get("mode", "")
-    if mode not in ("ocr", "reinterpret", "build", "map", "validate-docs"):
+    if mode not in ("ocr", "interpret", "build", "map", "validate-docs"):
         return jsonify({"error": "Invalid processing mode"}), 400
 
     body = request.get_json(silent=True) or {}

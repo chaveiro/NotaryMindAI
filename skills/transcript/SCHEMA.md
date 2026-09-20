@@ -43,7 +43,7 @@ projects/<project>/GLOSSARIO.md        (normalization)────────�
 >
 > 1. **Visual re-OCR of the photo** - reads the image again and reproduces
 >    `full_transcript` + fields.
-> 2. **Reinterpretation of `full_transcript`** (without re-reading the photo) - GenAI
+> 2. **Interpretation of `full_transcript`** (without re-reading the photo) - GenAI
 >    reads the already-transcribed text and (re)derives structured fields
 >    (`entities`, `properties`, `persons`, `relations`), updating the same image JSON.
 >
@@ -100,7 +100,7 @@ Fixed schema for each image JSON (1 per photo):
 
 `entities`, `properties`, `persons`, `relations` are structured fields of the image JSON.
 To review them **without re-reading the photo**, use GenAI reprocessing by
-**reinterpretation of `full_transcript`** (on request) - never edit the file by hand.
+**interpretation of `full_transcript`** (on request) - never edit the file by hand.
 
 ## `docs_logical_map.json` - declarative map (DATA)
 

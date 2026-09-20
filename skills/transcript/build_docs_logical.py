@@ -420,7 +420,7 @@ def build():
         imgs = d["images"]
         ents = {"names": [], "dates": [], "places": [], "values": []}
         props, sources, trans_parts, obs_parts = [], [], [], []
-        img_txs = []                     # transactions declared at image level (`reinterpret`)
+        img_txs = []                     # transactions declared at image level (`interpret`)
         confs, statuses, document_dates, locs = [], [], [], []
         model = None
         gen_p, gen_r = [], []

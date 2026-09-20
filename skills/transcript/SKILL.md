@@ -34,7 +34,7 @@ python3 ../../skills/transcript/validate_docs.py projects/cotimos
 - Follow SCHEMA.md rules
 - Consider corrections or local knowledge from `projects/<name>/GLOSSARIO.md` if existent
 
-### `reinterpret`: Reinterpret Existing Transcription
+### `interpret`: Interpret Existing Transcription
 - GenAI reads `metadata/<name>.json` `full_transcript` → updates `entities`, `properties`, `persons`, `relations`
 - Use when text interpretation needs fixing (without re-photographing)
 - Follow SCHEMA.md rules
@@ -43,7 +43,7 @@ python3 ../../skills/transcript/validate_docs.py projects/cotimos
 **Workflow:**
 1. List pending: `bun skills/transcript/find_new_docs.ts projects/cotimos`
 2. Ask user: "Process X pending images via GenAI?"
-3. Create `metadata/` JSON files (`ocr` or `reinterpret`)
+3. Create `metadata/` JSON files (`ocr` or `interpret`)
 4. Continue to `map`
 
 ---
@@ -69,7 +69,7 @@ contains empty `identities`, `persons`, and `relations` arrays until project fac
 known.
 
 The generated project `GLOSSARIO.md`, not the root template, is consumed directly by
-`build_docs_logical.py` and supplied as context to `ocr`, `reinterpret`, and `map` GenAI runs.
+`build_docs_logical.py` and supplied as context to `ocr`, `interpret`, and `map` GenAI runs.
 
 The builder reads the first valid fenced `json` object containing one of those three
 keys. Keep all structured local knowledge in that single block.
@@ -134,7 +134,7 @@ For EACH relation found in the document:
 
 1. **Always ask before modifying** metadata, map, or glossary
 2. **`docs_logical.json` is source of truth** — never hand-edit, regenerate via build
-3. **`metadata/*.json` are immutable** — only change via GenAI (`ocr`/`reinterpret`)
+3. **`metadata/*.json` are immutable** — only change via GenAI (`ocr`/`interpret`)
 4. **GLOSSARIO.md applied in-memory** — doesn't edit originals
 5. **Never invent** — mark uncertain as `[?]`, illegible as `[illegible]`
 6. **Schema** — field names are English (genealogy, persons, relations, etc.)
@@ -615,7 +615,7 @@ If you're very unsure, omit the relation rather than guess.
   ],
   "ocr_metadata": {
     "genai_model": "github-copilot/claude-opus-4.8",
-    "method": "visual_ocr|reinterpretation",
+    "method": "visual_ocr|interpretation",
     "ocr_confidence": "high|medium|low",
     "status": "complete",
     "notes": "Any processing notes"
@@ -630,7 +630,7 @@ If you're very unsure, omit the relation rather than guess.
 | Problem | Solution |
 |---------|----------|
 | "Pending images found" | Run `ocr` on those images |
-| "Validation error: missing_tx_relations" | Re-run `reinterpret` on the image to extract genealogy |
+| "Validation error: missing_tx_relations" | Re-run `interpret` on the image to extract genealogy |
 | "Validation error: tx_relation_orphan" | Seller/buyer missing from genealogy.persons |
 | "JSON invalid" | Run `jq empty docs_logical.json` to see error |
 | "Build fails" | Check GLOSSARIO.md syntax or run with verbose flag |

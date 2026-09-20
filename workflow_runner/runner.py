@@ -2,7 +2,7 @@
 """Run the named GenAI operations used by the NotaryMindAI API.
 
 CLI contract: runner.py <operation> <project_path> [model]
-Operations: ocr, reinterpret, map
+Operations: ocr, interpret, map
 """
 
 from __future__ import annotations
@@ -19,24 +19,16 @@ from typing import Any
 
 import litellm  # type: ignore
 
+from workflow_runner.tasks.ocr_task import OCR_TASK, OCR_SCHEMA
+from workflow_runner.tasks.interpret_task import INTERPRET_TASK, INTERPRET_SCHEMA
+from workflow_runner.tasks.map_task import MAP_TASK, MAP_SCHEMA
+
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf"}
-OPERATIONS = {"ocr", "reinterpret", "map"}
+OPERATIONS = {"ocr", "interpret", "map"}
 COPILOT_API_BASE = "https://api.githubcopilot.com"
 DEFAULT_OPENAI_BASE = "https://api.openai.com"
 DEFAULT_ANTHROPIC_BASE = "https://api.anthropic.com"
 DEFAULT_MODEL = "claude-opus-4.8"
-
-MODEL_ALIASES = {
-    "claude-opus-4.8": "anthropic/claude-opus-4-1-20250805",
-    "claude-opus-4.1": "anthropic/claude-opus-4-1-20250805",
-    "haiku-4.5": "anthropic/claude-3-5-haiku-latest",
-    "github-copilot/claude-opus-4.8": "github_copilot/claude-opus-4.8",
-    "copilot-gpt-4.1": "openai/gpt-4.1",
-    "copilot-gpt-4o": "openai/gpt-4o",
-    "gpt-4.1": "openai/gpt-4.1",
-    "gpt-4o": "openai/gpt-4o",
-}
-
 
 class RunnerError(RuntimeError):
     """A user-actionable workflow failure."""
@@ -112,59 +104,19 @@ def selected_model(operation: str, cli_model: str) -> str:
     return env_name(operation) or os.environ.get("NOTARYMIND_GENAI_MODEL", "").strip() or cli_model or DEFAULT_MODEL
 
 
-def normalize_model_name(model: str) -> str:
-    raw = (model or "").strip()
-    if not raw:
-        return raw
-    raw = raw.strip().lower().replace("_", "-").replace(" ", "-")
-    if raw.startswith("/"):
-        raw = raw[1:]
-    if "/" in raw:
-        return raw
-    alias = MODEL_ALIASES.get(raw, raw)
-    if alias.startswith(("anthropic/", "openai/", "deepseek/", "azure/", "vertex_ai/", "bedrock/", "ollama/", "ollama_chat/", "github_copilot/")):
-        return alias
-    if raw.startswith("claude"):
-        return f"anthropic/{raw}"
-    if raw.startswith("copilot"):
-        return f"openai/{raw.replace('copilot-', '')}"
-    if raw.startswith("deepseek"):
-        return f"deepseek/{raw}"
-    return f"openai/{raw}"
-
-
-def _copilot_device_auth_details() -> dict[str, str]:
-    try:
-        from litellm.llms.github_copilot.authenticator import Authenticator
-
-        info = Authenticator()._get_device_code()
-    except Exception:
-        return {"verification_uri": "https://github.com/login/device", "user_code": "", "device_code": ""}
-
-    verification_uri = str(info.get("verification_uri") or "https://github.com/login/device")
-    user_code = str(info.get("user_code") or "")
-    device_code = str(info.get("device_code") or "")
-    return {"verification_uri": verification_uri, "user_code": user_code, "device_code": device_code}
-
-
-def _copilot_login_text() -> str:
-    details = _copilot_device_auth_details()
-    verification_uri = details.get("verification_uri", "https://github.com/login/device")
-    user_code = details.get("user_code", "")
-    if user_code:
-        return f"Please visit {verification_uri} and enter code {user_code} to authenticate."
-    return f"Please visit {verification_uri} to authenticate."
 
 
 def build_runtime_config(model: str) -> dict[str, Any]:
-    normalized = normalize_model_name(model)
+    normalized = (model or "").strip()
     provider_hint = os.environ.get("GENAI_PROVIDER", "openai").strip().lower()
     request_kwargs: dict[str, Any] = {}
 
-    if normalized.startswith("anthropic/"):
+    if provider_hint in {"anthropic", "claude"} or normalized.startswith("anthropic/"):
         provider = "anthropic"
         api_key_name = "ANTHROPIC_API_KEY"
         api_base = os.environ.get("ANTHROPIC_API_BASE", os.environ.get("ANTHROPIC_BASE_URL", DEFAULT_ANTHROPIC_BASE)).rstrip("/")
+        if normalized.startswith("anthropic/"):
+            normalized = normalized
     elif provider_hint in {"azure", "azure_openai", "azure-openai"} or normalized.startswith("azure/"):
         provider = "azure"
         api_key_name = "AZURE_API_KEY"
@@ -214,8 +166,6 @@ def build_runtime_config(model: str) -> dict[str, Any]:
         provider = "copilot"
         api_key_name = ""
         api_base = os.environ.get("GITHUB_COPILOT_API_BASE", os.environ.get("OPENAI_API_BASE", os.environ.get("OPENAI_BASE_URL", COPILOT_API_BASE))).rstrip("/")
-        if normalized.startswith("github-copilot/"):
-            normalized = "github_copilot/" + normalized.split("/", 1)[1]
     elif provider_hint in {"lmstudio", "local"}:
         provider = "openai"
         api_key_name = "OPENAI_API_KEY"
@@ -285,30 +235,21 @@ def _atomic_json(path: Path, value: dict[str, Any]) -> None:
         raise
 
 
-def _common_rules() -> str:
-    return (
-        "Use only evidence in the supplied image, transcript, glossary, or project files. "
-        "Never invent names, dates, values, or relations. Use empty values or '[?]' "
-        "when evidence is unavailable. Return JSON only, without Markdown."
-    )
+
+def _ocr_prompt() -> str:
+    return OCR_TASK
+
+
+def _interpret_prompt() -> str:
+    return INTERPRET_TASK
+
+
+def _map_prompt() -> str:
+    return MAP_TASK
 
 
 def _schema_prompt() -> str:
-    return """Return an object with these keys:
-{
-  "image": string,
-  "document_type": string,
-  "document_date": string or array,
-  "location": string or array,
-  "full_transcript": string,
-  "entities": {"names": [], "dates": [], "places": [], "values": []},
-  "properties": [],
-  "persons": [],
-  "relations": [],
-  "ocr_metadata": {"status": string, "notes": string}
-}
-Each relation must contain from, relation, and to. Include sellers, buyers, creditors,
-and debtors in persons and relations when supported by evidence."""
+    return OCR_TASK
 
 
 def _litellm_payload(messages: list[dict[str, Any]], image: Path | None = None, provider: str | None = None) -> list[dict[str, Any]]:
@@ -417,7 +358,7 @@ def _run_ocr(project: Path, model: str) -> dict[str, Any]:
     failures = []
     for image in pending:
         try:
-            prompt = f"{_common_rules()}\n{_schema_prompt()}\nGlossary:\n{_glossary(project)}"
+            prompt = f"{_ocr_prompt()}\n\nGlossary:\n{_glossary(project)}"
             result = _request_json([{"role": "user", "content": prompt}], model, image)
             if not isinstance(result, dict):
                 raise RunnerError("OCR result must be a JSON object")
@@ -438,7 +379,7 @@ def _run_ocr(project: Path, model: str) -> dict[str, Any]:
     }
 
 
-def _run_reinterpret(project: Path, model: str) -> dict[str, Any]:
+def _run_interpret(project: Path, model: str) -> dict[str, Any]:
     written = []
     failures = []
     for path in _metadata_files(project):
@@ -447,29 +388,27 @@ def _run_reinterpret(project: Path, model: str) -> dict[str, Any]:
             transcript = current.get("full_transcript", "")
             if not transcript:
                 raise RunnerError("full_transcript is empty")
-            prompt = f"{_common_rules()}\nReturn the complete metadata object, preserving image and full_transcript. Update only structured interpretation fields.\n{_schema_prompt()}\nExisting metadata:\n{json.dumps(current, ensure_ascii=False)}\nGlossary:\n{_glossary(project)}"
+            prompt = f"{_interpret_prompt()}\n\nExisting metadata:\n{json.dumps(current, ensure_ascii=False)}\nGlossary:\n{_glossary(project)}"
             result = _request_json([{"role": "user", "content": prompt}], model)
             if not isinstance(result, dict) or result.get("image") not in {None, current.get("image"), path.stem + ".jpg"}:
-                raise RunnerError("reinterpretation returned an invalid image identity")
+                raise RunnerError("interpretation returned an invalid image identity")
             result["image"] = current.get("image", result.get("image", path.stem + ".jpg"))
             result["full_transcript"] = transcript
             result.setdefault("ocr_metadata", {})["genai_model"] = model
-            result["ocr_metadata"]["method"] = "workflow_runner.reinterpret"
+            result["ocr_metadata"]["method"] = "workflow_runner.interpret"
             _atomic_json(path, result)
             written.append(path.name)
         except RunnerError as error:
             failures.append({"file": path.name, "error": str(error)})
-    return {"operation": "reinterpret", "model": model, "processed": len(written), "failed": failures, "files_written": written}
+    return {"operation": "interpret", "model": model, "processed": len(written), "failed": failures, "files_written": written}
 
 
 def _run_map(project: Path, model: str) -> dict[str, Any]:
     metadata = [_read_json(path) for path in _metadata_files(project)]
     existing_path = project / "docs_logical_map.json"
     existing = _read_json(existing_path) if existing_path.exists() else {"schema_version": "2.0", "logical_documents": []}
-    prompt = f"""{_common_rules()}
-Return only a JSON object with schema_version and logical_documents.
-Each logical document must have id, title, type, and images. Use only image names present in the metadata.
-Preserve stable existing ids where possible. Do not modify metadata files.
+    prompt = f"""{_map_prompt()}
+
 Existing map:
 {json.dumps(existing, ensure_ascii=False)}
 Metadata transcripts and extracted fields:
@@ -497,7 +436,7 @@ Glossary:
 
 def main() -> int:
     if len(sys.argv) not in (3, 4):
-        print("Usage: runner.py <ocr|reinterpret|map> <project_path> [model]", file=sys.stderr)
+        print("Usage: runner.py <ocr|interpret|map> <project_path> [model]", file=sys.stderr)
         return 2
     operation, raw_project = sys.argv[1:3]
     cli_model = sys.argv[3] if len(sys.argv) == 4 else ""
@@ -510,8 +449,8 @@ def main() -> int:
         with ProjectLock(project):
             if operation == "ocr":
                 summary = _run_ocr(project, model)
-            elif operation == "reinterpret":
-                summary = _run_reinterpret(project, model)
+            elif operation == "interpret":
+                summary = _run_interpret(project, model)
             else:
                 summary = _run_map(project, model)
         print(json.dumps(summary, ensure_ascii=False, indent=2))

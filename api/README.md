@@ -36,11 +36,8 @@ python3 server.py
   ```bash
   PORT=9000 python3 server.py
   ```
-- `GENAI_PROVIDER` — Provider selection (`copilot`, `openai`, `anthropic`, `azure`, `vertex_ai`, `bedrock`, `ollama`, `lmstudio`)
-- `GITHUB_COPILOT_API_BASE` — Copilot base URL; default `https://api.githubcopilot.com`. This does not use `OPENAI_API_KEY`.
-- `OPENAI_API_KEY` / `OPENAI_API_BASE` — OpenAI-compatible provider settings
-- `ANTHROPIC_API_KEY` / `ANTHROPIC_API_BASE` — Anthropic provider settings
-- `NOTARYMIND_<OPERATION>_MODEL` or `NOTARYMIND_GENAI_MODEL` — Optional model overrides for the built-in workflow runner used by processing modes `ocr`, `reinterpret`, and `map`. Modes `build` and `validate-docs` run locally without model selection.
+
+The API remains provider-neutral. It invokes the generic worker entry point and streams stdout/stderr back to the UI with SSE. Provider-specific logic stays inside `workflow_runner/runner.py`.
 
 When the UI is served separately, pass the API origin explicitly, for example:
 `http://localhost:8000/ui/main.html?project=cotimos&api=http://localhost:8790`.
@@ -60,7 +57,7 @@ See parent README.md for full API documentation.
 - `POST /api/projects/{name}/upload` — Upload files
 - `GET|PUT /api/projects/{name}/glossary` — Read or save `GLOSSARIO.md`
 - `GET|PUT /api/projects/{name}/file/{file_name}` — Edit `GLOSSARIO.md`, `docs_logical_map.json`, `docs_logical.json`, or `gender_rules.json`
-- `POST /api/projects/{name}/process` — Run named operation `ocr`, `reinterpret`, `build`, `map`, or `validate-docs`; `ocr`, `reinterpret`, and `map` invoke the built-in `workflow_runner/runner.py` script directly, while `build` and `validate-docs` run locally. Failures return the captured runner stdout/stderr in the JSON response so the UI can display the underlying error.
+- `POST /api/projects/{name}/process` — Run named operation `ocr`, `interpret`, `build`, `map`, or `validate-docs`; `ocr`, `interpret`, and `map` invoke the built-in `workflow_runner/runner.py` script directly, while `build` and `validate-docs` run locally. When `stream: true` is used, the server emits SSE log/result events from the worker and the UI can show the live prompt and final status without rewriting the provider logic in the API layer.
 - `POST /api/projects/{name}/tools` — Run `audit-inference`, `validate-map`, or `validate-variants` and return captured output/exit code
 - `POST /api/agent/query` — Query genealogical data (read-only)
 
@@ -95,10 +92,10 @@ temporary `PROJECTS_DIR` and mocked subprocess/GenAI runners.
 
 ## Architecture
 
-This API is part of NotaryMindAi monorepo:
+This API is part of a single monorepo:
 - `api/` — This service (Python backend)
 - `ui/` — Frontend (HTML/JS)
 - `projects/` — Project data
 - `skills/` — Processing tools and workflow documentation
 
-See the parent `README.md` for the current architecture and endpoint overview.
+See the parent `README.md` for the overall project structure and workflow overview.

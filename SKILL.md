@@ -18,7 +18,7 @@ Convert photographs and PDFs of historical manuscripts into **structured, valida
 
 > ⚠️ **OCR requires `github-copilot/claude-opus-4.8`**
 > Weak models produce poor transcriptions. Always verify the active model before running OCR (`ocr` mode), 
-> reinterpretation (`reinterpret` mode), or map generation (`map` mode). Register model used in `ocr_metadata.genai_model`.
+> interpretation (`interpret` mode), or map generation (`map` mode). Register model used in `ocr_metadata.genai_model`.
 >
 > 🔤 **`projects/<project>/GLOSSARIO.md` (normalization rules) is applied at 2 moments:**
 > 1. As **reading aid to GenAI** when generating image JSON/metadata 
@@ -64,7 +64,7 @@ NotaryMindAi/
 
 2. **Immutable Source Files**
    - Image JSON files = OCR output, **never edited by hand**
-   - Only modified via explicit GenAI reprocessing (`ocr` or `reinterpret`)
+   - Only modified via explicit GenAI reprocessing (`ocr` or `interpret`)
    - Guarantees data integrity
 
 3. **Declarative Mapping**
@@ -260,7 +260,7 @@ http://localhost:8000/ui/main.html?project=my-archive
 
 ## 📖 Processing Modes (Detailed)
 
-### OCR / Reinterpret: Create or Reprocess Image JSON via GenAI
+### OCR / Interpret: Create or Reprocess Image JSON via GenAI
 
 Image JSON only changes **on explicit request**, via GenAI, always using the **same schema**.
 
@@ -271,7 +271,7 @@ Image JSON only changes **on explicit request**, via GenAI, always using the **s
   - Each seller/debtor and buyer/creditor as `persons[]` (with explicit role)
   - One relationship **per individual** in `relations[]` (e.g., `sells to`, with `category` and `value`)
 
-**`reinterpret` — Reinterpretation of `full_transcript`** (without rereading photo)
+**`interpret` — Interpretation of `full_transcript`** (without rereading photo)
 - GenAI reads the already-transcribed text and with GLOSSARIO.md support
 - Derives (or re-derives) `entities`, `properties`, `genealogy`
 - Including transactional relationships per person (same `ocr` requirement)
@@ -417,7 +417,7 @@ Before delivering:
    - Immutable once generated (modify via regeneration only)
 
 2. **`metadata/*.json` are OCR output, never hand-edited**
-   - Only changes via explicit GenAI reprocessing (`ocr`/`reinterpret`)
+   - Only changes via explicit GenAI reprocessing (`ocr`/`interpret`)
    - Always same schema
 
 3. **Build is agnostic**
@@ -484,7 +484,7 @@ All prompts include `GLOSSARIO.md` as context.
 ## 🔄 Typical Session Workflow
 
 The UI exposes the same workflow through Settings: Project (load/new/external/delete),
-Import Files, Build Metadata (`ocr`/`reinterpret`/`build`/`map` plus glossary editor), and Project Chat. All
+Import Files, Build Metadata (`ocr`/`interpret`/`build`/`map` plus glossary editor), and Project Chat. All
 project-aware controls default to the project currently loaded in the viewer.
 
 1. **Preparation**
@@ -495,7 +495,7 @@ project-aware controls default to the project currently loaded in the viewer.
 
 2. **Process Images**
    - Ask user for confirmation
-   - Run GenAI `ocr` or `reinterpret`
+   - Run GenAI `ocr` or `interpret`
    - Save metadata JSON files
 
 3. **Update Map**

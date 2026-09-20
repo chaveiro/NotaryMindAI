@@ -100,7 +100,7 @@
       "parameters": [{"$ref": "#/components/parameters/ProjectName"}],
       "post": {
         "summary": "Run a named processing operation",
-        "description": "The API invokes workflow_runner/runner.py directly for ocr, reinterpret, and map. Model selection is internal to the runner and may still use model-related environment variables.",
+        "description": "The API invokes workflow_runner/runner.py directly for ocr, interpret, and map. Model selection is internal to the runner and may still use model-related environment variables.",
         "requestBody": {"$ref": "#/components/requestBodies/Process"},
         "responses": {
           "200": {"description": "Processing completed"},
@@ -167,7 +167,7 @@
     "requestBodies": {
       "ProjectCreate": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string"}, "displayName": {"type": "string"}}}}}},
       "Upload": {"required": true, "content": {"multipart/form-data": {"schema": {"type": "object", "properties": {"files": {"type": "array", "items": {"type": "string", "format": "binary"}}}}}}},
-      "Process": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["mode"], "properties": {"mode": {"type": "string", "enum": ["ocr", "reinterpret", "build", "map", "validate-docs"]}}}}}},
+      "Process": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["mode"], "properties": {"mode": {"type": "string", "enum": ["ocr", "interpret", "build", "map", "validate-docs"]}}}}}},
       "Tool": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["tool"], "properties": {"tool": {"type": "string"}}}}}},
       "AgentQuery": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["question"], "properties": {"project": {"type": "string", "default": "cotimos"}, "question": {"type": "string"}}}}}}
     },

@@ -13,10 +13,12 @@
 NotaryMindAI is a modular system for digitizing and structuring historical documents (primarily genealogical and notarial records) using:
 
 - 📷 **Image Processing**: High-quality scans of historical manuscripts
-- 🧠 **GenAI OCR**: Claude Opus 4.8 for paleographic transcription
+- 🧠 **GenAI OCR**: A LiteLLM-backed workflow adapter that sends the exact configured model string to the active provider
 - 🗂️ **Data Structure**: Standardized JSON schema for genealogical relationships and property data
 - 🔍 **Validation**: Automated consistency checks (no duplicate vendors, valid genealogical chains, etc.)
 - 📊 **Visualization**: Interactive graph viewer for relationships and property networks
+
+The current architecture keeps provider-specific logic in the worker and keeps the API server generic. The UI consumes server-sent events from the worker as the workflow runs, so authentication prompts and progress output are streamed live to the browser.
 
 **Key Use Cases:**
 - ✅ Genealogical research (family trees, lineages, inheritance)
@@ -88,6 +90,8 @@ the logical document map, and the consolidated `docs_logical.json` output.
 |-----------|------------|
 | **Project-Centric Data** | Each archive lives in `projects/<name>/` with its own metadata and rules |
 | **Agnostic Tools** | Build, validation, and UI work for ANY project (zero hardcoded data) |
+| **Provider Isolation** | Provider logic remains in `workflow_runner/runner.py`; the Flask API remains generic |
+| **Streaming Progress** | `POST /api/projects/<name>/process` streams worker stdout/stderr back to the UI |
 | **Immutable OCR Output** | `metadata/*.json` files = source OCR, never hand-edited |
 | **Declarative Mapping** | All project-specific logic in data files (`docs_logical_map.json`, `GLOSSARIO.md`) |
 | **Single Source of Truth** | `docs_logical.json` is the consolidated, validated output |
@@ -134,7 +138,7 @@ http://localhost:8787/
 |-----|--------|
 | **🗂️ Project** | Load, create, or delete projects; load external JSON from a URL or file |
 | **📥 Import Files** | Upload images/PDFs and review pending or stale metadata status |
-| **🛠️ Build Metadata** | Run OCR, Reinterpret, Map, or Build and edit `GLOSSARIO.md` |
+| **🛠️ Build Metadata** | Run OCR, Interpret, Map, or Build and edit `GLOSSARY.md` |
 | **💬 Project Chat** | Query consolidated project data (read-only) |
 
 All project selectors default to the project currently loaded in the viewer. On narrow
@@ -169,12 +173,16 @@ python3 -m http.server 8000
 
 ### Processing Step 1: OCR via GenAI
 ```
-GenAI reads image or PDF + GLOSSARIO.md
+LiteLLM-backed worker reads image or PDF + GLOSSARIO.md
+        ↓
+Sends the exact configured model string to the active provider
         ↓
 Creates metadata JSON (full_transcript + entities + persons + relations)
         ↓
 Saves to: projects/my-archive/metadata/page_0001.json
 ```
+
+For GitHub Copilot, LiteLLM manages the device login flow. The worker surfaces the provider prompt directly instead of rewriting it in the API layer.
 
 **Metadata structure:** See `skills/transcript/SCHEMA.md` for complete field reference, examples, and data contract.
 
@@ -207,6 +215,65 @@ Outputs: docs_logical.json (single source of truth)
 ```
 
 **Output schema:** See `skills/transcript/SCHEMA.md` for complete structure, fields, and validation rules.
+
+## 🔧 Model Selection Examples
+
+The workflow runner resolves models in this order:
+
+1. `NOTARYMIND_<OPERATION>_MODEL`
+2. `NOTARYMIND_GENAI_MODEL`
+3. CLI model argument
+4. built-in default `claude-opus-4.8`
+
+### Per-operation selection
+```bash
+export GENAI_PROVIDER=openai
+export OPENAI_API_KEY="your-openai-key"
+
+export NOTARYMIND_OCR_MODEL="gpt-4.1"
+export NOTARYMIND_INTERPRET_MODEL="gpt-4.1-mini"
+export NOTARYMIND_MAP_MODEL="gpt-4.1"
+```
+
+### Single default for all operations
+```bash
+export GENAI_PROVIDER=anthropic
+export ANTHROPIC_API_KEY="your-anthropic-key"
+export NOTARYMIND_GENAI_MODEL="claude-opus-4.8"
+```
+
+### GitHub Copilot
+```bash
+export GENAI_PROVIDER=copilot
+export GITHUB_COPILOT_API_BASE="https://api.githubcopilot.com"
+
+export NOTARYMIND_OCR_MODEL="github-copilot/claude-opus-4.8"
+export NOTARYMIND_INTERPRET_MODEL="github-copilot/haiku-4.5"
+export NOTARYMIND_MAP_MODEL="github-copilot/haiku-4.5"
+```
+
+> Copilot is handled through LiteLLM's GitHub device-login flow and does not use `OPENAI_API_KEY`.
+
+### Local providers
+```bash
+# Ollama
+export GENAI_PROVIDER=ollama
+export OLLAMA_API_BASE="http://localhost:11434"
+export NOTARYMIND_OCR_MODEL="llama3.1:8b"
+
+# LM Studio
+export GENAI_PROVIDER=lmstudio
+export OPENAI_API_BASE="http://localhost:1234/v1"
+export OPENAI_API_KEY="lm-studio"
+export NOTARYMIND_OCR_MODEL="local-model"
+```
+
+### One-off override via CLI
+```bash
+python3 workflow_runner/runner.py ocr projects/demo_project "gpt-4.1"
+```
+
+This overrides the environment defaults for that single run.
 
 ### Step 4: Visualization
 ```
@@ -279,10 +346,10 @@ jq empty projects/my-archive/docs_logical.json
 
 ## 🎓 Processing Modes
 
-### OCR / Reinterpret: Create or Reprocess Image JSON
+### OCR / Interpret: Create or Reprocess Image JSON
 **When:** New images or complete retranscription needed  
 **How:** GenAI reads image + GLOSSARIO.md → generates `metadata/<name>.json` (`ocr`), or
-re-derives from the existing `full_transcript` without re-reading the image (`reinterpret`)  
+re-derives from the existing `full_transcript` without re-reading the image (`interpret`)  
 **Tools:** Claude Opus 4.8 + prompts from `SKILL.md`  
 **Result:** Per-image JSON with transcription, entities, genealogy
 
@@ -533,7 +600,7 @@ the real Cótimos project: reading corrections, structured local genealogy, and 
 notes. Its identity, person, and relation arrays start empty until facts are verified.
 The API creates that file from [`skills/transcript/GLOSSARY-TEMPLATE.md`](skills/transcript/GLOSSARY-TEMPLATE.md),
 replacing only the project label, directory name, and creation timestamp. The generated
-project `GLOSSARIO.md` is then shared by deterministic builds and `ocr`/`reinterpret`/`map` GenAI context.
+project `GLOSSARIO.md` is then shared by deterministic builds and `ocr`/`interpret`/`map` GenAI context.
 `docs_logical_map.json` uses `logical_documents` as its only top-level document
 collection. The generated `docs_logical.json` output separately uses `documents`.
 
@@ -595,11 +662,11 @@ PUT response: {"ok": true} or {"error": "..."}
 **Run a processing mode**
 ```
 POST /api/projects/{name}/process
-Body: {"mode": "ocr|reinterpret|build|map"}
+Body: {"mode": "ocr|interpret|build|map"}
 ```
 
 Mode `build` runs the deterministic build and validation locally. Modes `ocr`,
-`reinterpret`, and `map` invoke `workflow_runner/runner.py` directly with
+`interpret`, and `map` invoke `workflow_runner/runner.py` directly with
 `<mode> <project_path>`. The runner selects the model from
 `NOTARYMIND_<OPERATION>_MODEL`, then `NOTARYMIND_GENAI_MODEL`, then its default.
 
