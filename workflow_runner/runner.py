@@ -97,11 +97,27 @@ def _project_path(raw: str) -> Path:
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4):
-        print("Usage: runner.py <ocr|interpret|map> <project_path> [model]", file=sys.stderr)
+    args = sys.argv[1:]
+    if len(args) < 2:
+        print("Usage: runner.py <ocr|interpret|map> <project_path> [--only-new] [model]", file=sys.stderr)
         return 2
-    operation, raw_project = sys.argv[1:3]
-    cli_model = sys.argv[3] if len(sys.argv) == 4 else ""
+
+    operation = args[0]
+    raw_project = args[1]
+    only_new = False
+    cli_model = ""
+    for token in args[2:]:
+        if token == "--only-new":
+            only_new = True
+        elif token.startswith("-"):
+            print(f"Unsupported flag: {token}", file=sys.stderr)
+            return 2
+        elif not cli_model:
+            cli_model = token
+        else:
+            print(f"Unexpected argument: {token}", file=sys.stderr)
+            return 2
+
     if operation not in OPERATIONS:
         print(f"Unsupported operation: {operation}", file=sys.stderr)
         return 2
@@ -110,11 +126,11 @@ def main() -> int:
         project = _project_path(raw_project)
         with ProjectLock(project):
             if operation == "ocr":
-                summary = run_ocr(project, model)
+                summary = run_ocr(project, model, only_new=only_new)
             elif operation == "interpret":
-                summary = run_interpret(project, model)
+                summary = run_interpret(project, model, only_new=only_new)
             else:
-                summary = run_map(project, model)
+                summary = run_map(project, model, only_new=only_new)
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return 1 if summary.get("failed") else 0
     except RunnerError as error:

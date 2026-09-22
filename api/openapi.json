@@ -167,7 +167,7 @@
     "requestBodies": {
       "ProjectCreate": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string"}, "displayName": {"type": "string"}}}}}},
       "Upload": {"required": true, "content": {"multipart/form-data": {"schema": {"type": "object", "properties": {"files": {"type": "array", "items": {"type": "string", "format": "binary"}}}}}}},
-      "Process": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["mode"], "properties": {"mode": {"type": "string", "enum": ["ocr", "interpret", "build", "map", "validate-docs"]}}}}}},
+      "Process": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["mode"], "properties": {"mode": {"type": "string", "enum": ["ocr", "interpret", "build", "map", "validate-docs"]}, "only_new": {"type": "boolean", "description": "Process only files that are new or have newer source content than their JSON metadata; keep existing results intact."}}}}}},
       "Tool": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["tool"], "properties": {"tool": {"type": "string"}}}}}},
       "AgentQuery": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["question"], "properties": {"project": {"type": "string", "default": "cotimos"}, "question": {"type": "string"}}}}}}
     },

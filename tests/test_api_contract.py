@@ -172,6 +172,30 @@ class ApiContractTests(unittest.TestCase):
         self.assertEqual(details["mapImages"], 1)
         self.assertEqual(details["docsTotalImages"], 0)
 
+    def test_process_route_forwards_only_new_flag_to_runner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            projects_dir = root / "projects"
+            project_dir = projects_dir / "demo"
+            (project_dir / "imported").mkdir(parents=True)
+            (project_dir / "metadata").mkdir(parents=True)
+            (project_dir / "GLOSSARIO.md").write_text("# Glossary\n", encoding="utf-8")
+            (project_dir / "docs_logical_map.json").write_text(json.dumps({"schema_version": "2.0", "logical_documents": []}), encoding="utf-8")
+            (project_dir / "docs_logical.json").write_text(json.dumps({"schema_version": "2.0", "documents": [], "persons": [], "relations": [], "properties": []}), encoding="utf-8")
+
+            with mock.patch.object(server, "PROJECTS_DIR", projects_dir), \
+                 mock.patch("api.server.subprocess.run") as run_mock:
+                run_mock.return_value.returncode = 0
+                run_mock.return_value.stdout = '{"operation": "ocr"}\n'
+                run_mock.return_value.stderr = ''
+
+                with app.test_client() as client:
+                    response = client.post("/api/projects/demo/process", json={"mode": "ocr", "only_new": True})
+
+        self.assertEqual(response.status_code, 200)
+        command = run_mock.call_args[0][0]
+        self.assertIn("--only-new", command)
+
 
 if __name__ == "__main__":
     unittest.main()

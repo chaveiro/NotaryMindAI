@@ -82,10 +82,29 @@ def _validate_map_result(result: Any, *, available: set[str]) -> set[str]:
     return seen
 
 
-def run_map(project: Path, model: str) -> dict[str, Any]:
+def run_map(project: Path, model: str, *, only_new: bool = False) -> dict[str, Any]:
     metadata = [_read_json(path) for path in _metadata_files(project)]
     existing_path = project / "docs_logical_map.json"
     existing = _read_json(existing_path) if existing_path.exists() else {"schema_version": "2.0", "logical_documents": []}
+
+    if only_new:
+        existing_images = {
+            image
+            for document in existing.get("logical_documents", [])
+            for image in document.get("images", [])
+            if isinstance(image, str)
+        }
+        metadata = [item for item in metadata if item.get("image") not in existing_images]
+        if not metadata:
+            return {
+                "operation": "map",
+                "model": model,
+                "documents": len(existing.get("logical_documents", [])),
+                "images_mapped": len(existing_images),
+                "files_written": [existing_path.name],
+                "skipped": True,
+            }
+
     prompt = f"""{MAP_TASK}
 
 Existing map:
@@ -98,6 +117,23 @@ Glossary:
     available = {item.get("image") for item in metadata}
     seen = _validate_map_result(result, available=available)
     result["schema_version"] = "2.0"
+
+    if only_new:
+        merged_documents = list(existing.get("logical_documents", []))
+        merged_images = {
+            image
+            for document in merged_documents
+            for image in document.get("images", [])
+            if isinstance(image, str)
+        }
+        for document in result.get("logical_documents", []):
+            new_images = [image for image in document.get("images", []) if image not in merged_images]
+            if not new_images:
+                continue
+            merged_documents.append({**document, "images": new_images})
+            merged_images.update(new_images)
+        result = {"schema_version": "2.0", "logical_documents": merged_documents}
+
     _atomic_json(existing_path, result)
     return {"operation": "map", "model": model, "documents": len(result["logical_documents"]), "images_mapped": len(seen), "files_written": [existing_path.name]}
 

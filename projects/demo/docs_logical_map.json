@@ -1,6 +1,14 @@
 {
   "schema_version": "2.0",
-  "name": "My demo project",
-  "description": "Archive My demo project",
-  "logical_documents": []
+  "logical_documents": [
+    {
+      "id": "DL01",
+      "title": "Certidão de baptismo de Francisco Sebastião (Rabaçal, 1885)",
+      "type": "Certidão de baptismo",
+      "images": [
+        "20260827_231154.jpg",
+        "20260827_231206.jpg"
+      ]
+    }
+  ]
 }

@@ -164,14 +164,26 @@ def _validate_ocr_result(result: Any, *, image_name: str) -> dict[str, Any]:
     return result
 
 
-def run_ocr(project: Path, model: str) -> dict[str, Any]:
+def run_ocr(project: Path, model: str, *, only_new: bool = False) -> dict[str, Any]:
     imported = sorted(p for p in (project / "imported").iterdir() if p.suffix.lower() in SUPPORTED_EXTENSIONS)
     metadata = project / "metadata"
     metadata.mkdir(exist_ok=True)
-    pending = [image for image in imported if not (metadata / f"{image.stem}.json").exists()]
+    targets = imported
+    if only_new:
+        targets = []
+        for image in imported:
+            metadata_path = metadata / f"{image.stem}.json"
+            if not metadata_path.exists():
+                targets.append(image)
+                continue
+            try:
+                if image.stat().st_mtime > metadata_path.stat().st_mtime:
+                    targets.append(image)
+            except OSError:
+                targets.append(image)
     written = []
     failures = []
-    for image in pending:
+    for image in targets:
         try:
             prompt = f"{OCR_TASK}\n\nGlossary:\n{_glossary(project)}"
             result = _request_json([{"role": "user", "content": prompt}], model, image)
@@ -186,7 +198,7 @@ def run_ocr(project: Path, model: str) -> dict[str, Any]:
         "operation": "ocr",
         "model": model,
         "processed": len(written),
-        "skipped": len(imported) - len(pending),
+        "skipped": len(imported) - len(targets),
         "failed": failures,
         "files_written": written,
     }

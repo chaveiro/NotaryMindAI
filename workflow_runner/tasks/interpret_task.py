@@ -183,10 +183,29 @@ def _validate_interpret_result(result: Any, *, current: dict[str, Any], image_na
     return result
 
 
-def run_interpret(project: Path, model: str) -> dict[str, Any]:
+def run_interpret(project: Path, model: str, *, only_new: bool = False) -> dict[str, Any]:
+    metadata_files = _metadata_files(project)
+    if only_new:
+        imported = sorted(
+            p for p in (project / "imported").iterdir()
+            if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".pdf"}
+        )
+        by_stem = {image.stem: image for image in imported}
+        filtered: list[Path] = []
+        for path in metadata_files:
+            image = by_stem.get(path.stem)
+            if image is None:
+                continue
+            try:
+                if image.stat().st_mtime > path.stat().st_mtime:
+                    filtered.append(path)
+            except OSError:
+                filtered.append(path)
+        metadata_files = filtered
+
     written = []
     failures = []
-    for path in _metadata_files(project):
+    for path in metadata_files:
         try:
             current = _read_json(path)
             transcript = current.get("full_transcript", "")

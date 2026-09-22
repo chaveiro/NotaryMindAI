@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import sys
@@ -164,6 +165,40 @@ class WorkflowRunnerCliTests(unittest.TestCase):
         self.assertTrue(callable(run_ocr))
         self.assertTrue(callable(run_interpret))
         self.assertTrue(callable(run_map))
+
+    def test_ocr_only_new_processes_only_new_images(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "demo-project"
+            (project / "imported").mkdir(parents=True)
+            (project / "metadata").mkdir(parents=True)
+            (project / "imported" / "old.jpg").write_text("old", encoding="utf-8")
+            (project / "imported" / "new.jpg").write_text("new", encoding="utf-8")
+            (project / "metadata" / "old.json").write_text(json.dumps({"image": "old.jpg", "full_transcript": "old transcript"}), encoding="utf-8")
+            (project / "GLOSSARIO.md").write_text("# Glossary\n", encoding="utf-8")
+
+            processed = []
+
+            def fake_request(messages, model, image=None):
+                processed.append(image.name if image else "noimage")
+                return {
+                    "image": image.name if image else "",
+                    "document_type": "test",
+                    "document_date": "2024",
+                    "location": "",
+                    "full_transcript": "text",
+                    "entities": {"names": [], "dates": [], "places": [], "values": []},
+                    "properties": [],
+                    "persons": [],
+                    "relations": [],
+                    "ocr_metadata": {"status": "done", "notes": "ok"},
+                }
+
+            with mock.patch("workflow_runner.tasks.ocr_task._request_json", side_effect=fake_request):
+                summary = run_ocr(project, "model-x", only_new=True)
+
+        self.assertEqual(summary["processed"], 1)
+        self.assertEqual(summary["files_written"], ["new.jpg"])
+        self.assertEqual(processed, ["new.jpg"])
 
     def test_project_lock_error_mentions_project_and_lock_path(self):
         with tempfile.TemporaryDirectory() as tmp:

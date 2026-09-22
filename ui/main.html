@@ -415,6 +415,13 @@ const hidden=new Set();            // categorias escondidas
 let isoSet=new Set();              // nós isolados ou com transacionais hidden
 let posGen={}, posProp={}, posDoc={};   // posições por vista
 const rowYs=[];                    // linhas-guia (genealogia)
+let genealogySnapAnchor=0;
+let genealogySnapStep=0;
+
+function nearestGenealogySnap(y){
+  if(!genealogySnapStep) return y;
+  return genealogySnapAnchor + Math.round((y-genealogySnapAnchor)/genealogySnapStep)*genealogySnapStep;
+}
 
 // Initialize app after config loads
 const params = new URLSearchParams(window.location.search);
@@ -1006,43 +1013,44 @@ window.addEventListener("mousemove",e=>{
 });
 window.addEventListener("mouseup",()=>{
   if(panning){ panning=null; svg.classList.remove("panning"); }
-  if(dragCtx){ if(curSnap){ let best=rowYs[0],bd=1e9; rowYs.forEach(y=>{const d=Math.abs(y-curPos[dragCtx.id].y);if(d<bd){bd=d;best=y;}}); curPos[dragCtx.id].y=best; dragCtx.g.setAttribute("transform",`translate(${curPos[dragCtx.id].x},${best})`); updateEdges(); }
+  if(dragCtx){ if(curSnap){ const best=nearestGenealogySnap(curPos[dragCtx.id].y); curPos[dragCtx.id].y=best; dragCtx.g.setAttribute("transform",`translate(${curPos[dragCtx.id].x},${best})`); updateEdges(); }
     dragCtx.g.classList.remove("drag"); const mv=dragCtx.moved,id=dragCtx.id; dragCtx=null; if(!mv) selectNode(id); }
 });
 
 // ---------- GENEALOGIA ----------
+function relationFlowIds(relation){
+  if(relation.cat==="inheritance") {
+    const relText = norm(relation.relation || "");
+    const sourceIsHeir = /herdeir|heranca de|heranca da|legitima|quinhao|lote/.test(relText);
+    return sourceIsHeir ? [relation.paraId, relation.deId] : [relation.deId, relation.paraId];
+  }
+  if(relation.cat==="filiation"||relation.cat==="descent") {
+    return [relation.paraId, relation.deId];
+  }
+  return [relation.deId, relation.paraId];
+}
+
 function computeLevels(){
   const lv={}; MODEL.people.forEach(p=>lv[p.id]=0);
-  const fil=[],pair=[],her=[],sale=[],mortgage=[];
+  const directed=[],pair=[],transactional=[];
   MODEL.relations.forEach(r=>{
     if(!MODEL.pById[r.deId]||!MODEL.pById[r.paraId]) return;
-    if(r.cat==="filiation"||r.cat==="descent") fil.push([r.deId,r.paraId]);
+    if(r.cat==="filiation"||r.cat==="descent"||r.cat==="inheritance"||r.cat==="godparent"||r.cat==="sale"||r.cat==="mortgage"||r.cat==="debt"||r.cat==="purchase") directed.push(relationFlowIds(r));
     else if(r.cat==="marriage"||r.cat==="kinship") pair.push([r.deId,r.paraId]);
-    else if(r.cat==="inheritance") her.push([r.deId,r.paraId]);
-    else if(r.cat==="godparent") fil.push([r.deId,r.paraId]);  // padrinho funciona como genealogia: padrinho é acima, afilhado abaixo
-    else if(r.cat==="sale") sale.push([r.deId,r.paraId]);  // de=seller, para=buyer
-    else if(r.cat==="mortgage") mortgage.push([r.deId,r.paraId]);  // de=devedor, para=credor
+    if(r.cat==="sale"||r.cat==="mortgage"||r.cat==="debt"||r.cat==="purchase") transactional.push([r.deId,r.paraId]);
   });
-  // Falecidos ficam no nível 0 por default
-  her.forEach(([herdeiro,falecido])=>{ lv[falecido]=0; });
   let changed=true;
   for(let it=0;it<MODEL.people.length+5&&changed;it++){changed=false;
-    fil.forEach(([c,pa])=>{const v=(lv[pa]||0)+1; if(v>lv[c]){lv[c]=v;changed=true;}});
+    directed.forEach(([fromId,toId])=>{const v=(lv[fromId]||0)+1; if(v>lv[toId]){lv[toId]=v;changed=true;}});
     pair.forEach(([a,b])=>{const m=Math.max(lv[a],lv[b]); if(lv[a]<m){lv[a]=m;changed=true;} if(lv[b]<m){lv[b]=m;changed=true;}});
-    her.forEach(([herdeiro,falecido])=>{ if(lv[herdeiro]<=lv[falecido]){ lv[herdeiro]=lv[falecido]+1; changed=true; } });
   }
-  // Posicionar apenas selleres/devedores sem genealogia core: linha -1 (acima de tudo)
-  // Herdeiros ficam estruturalmente ligados aos falecidos (não são movidos)
+  // Posicionar apenas sources transacionais sem genealogia core: linha -1 (acima de tudo)
   const coreGen = new Set(['filiation','descent','kinship']);
-  sale.concat(mortgage).forEach(([tx,pair])=>{
-    const temCore = MODEL.relations.some(r=>(r.deId===tx||r.paraId===tx)&&coreGen.has(r.cat));
-    if(!temCore) lv[tx] = -1;  // seller/devedor isolado: linha de topo
-  });
-  // Posicionar apenas buyeres/credores (não falecidos) que só têm transacionais: linha maxLv+1 (abaixo de tudo)
-  const maxLv = Math.max(...Object.values(lv).filter(v=>v>-1));
-  sale.concat(mortgage).forEach(([tx,pair])=>{
-    const temCore = MODEL.relations.some(r=>(r.deId===pair||r.paraId===pair)&&coreGen.has(r.cat));
-    if(!temCore) lv[pair] = maxLv + 1;  // buyer/credor isolado: linha de fundo
+  transactional.forEach(([fromId,toId])=>{
+    const fromHasCore = MODEL.relations.some(r=>(r.deId===fromId||r.paraId===fromId)&&coreGen.has(r.cat));
+    if(!fromHasCore) lv[fromId] = -1;
+    const toHasCore = MODEL.relations.some(r=>(r.deId===toId||r.paraId===toId)&&coreGen.has(r.cat));
+    if(!toHasCore) lv[toId] = Math.max(...Object.values(lv).filter(v=>v>-1)) + 1;
   });
   return lv;
 }
@@ -1054,6 +1062,8 @@ function layoutGen(){
   const rows={}; MODEL.people.forEach(p=>{(rows[lv[p.id]]=rows[lv[p.id]]||[]).push(p);});
 
   const GAPX=CONFIG.layout.genealogy.gap_x, GAPY=CONFIG.layout.genealogy.gap_y, PAD=CONFIG.layout.genealogy.padding, COUPLE_GAP=CONFIG.layout.genealogy.couple_gap, SIB_GAP=CONFIG.layout.genealogy.sibling_gap;
+  genealogySnapAnchor = PAD;
+  genealogySnapStep = NODE_H + GAPY;
   // Criar mapa de nível → Y (considerando níveis negativos e positivos)
   const levelToY = {};
   const minLevel = Math.min(...levels);
@@ -1067,7 +1077,11 @@ function layoutGen(){
   const parents={}, children={}, spouses={}, sibs={};
   MODEL.people.forEach(p=>{parents[p.id]=[]; children[p.id]=[]; spouses[p.id]=[]; sibs[p.id]=[];});
   MODEL.relations.forEach(r=>{ if(!MODEL.pById[r.deId]||!MODEL.pById[r.paraId]) return;
-    if(r.cat==="filiation"||r.cat==="descent"||r.cat==="inheritance"){ parents[r.deId].push(r.paraId); children[r.paraId].push(r.deId); }
+    if(r.cat==="filiation"||r.cat==="descent"||r.cat==="inheritance"||r.cat==="godparent"||r.cat==="sale"||r.cat==="mortgage"||r.cat==="debt"||r.cat==="purchase"){
+      const [fromId,toId] = relationFlowIds(r);
+      parents[toId].push(fromId);
+      children[fromId].push(toId);
+    }
     if(r.cat==="marriage"){ spouses[r.deId].push(r.paraId); spouses[r.paraId].push(r.deId); }
     if(r.cat==="kinship"){ sibs[r.deId].push(r.paraId); sibs[r.paraId].push(r.deId); }
   });
@@ -1271,11 +1285,11 @@ function renderGen(){
       else if(conf === "low") dash = "2 4";
     } else if(r.cat==="descent") dash = "6 5";  // Descent (genealogical inferred): medium dash
     // Direção lógica das setas: pai→filho, falecido→herdeiro, padrinho→afilhado, seller→buyer
-    const isGenealogical=(r.cat==="filiation"||r.cat==="descent"||r.cat==="inheritance");  // herdação é genealogia but inverted
-    const isTransactional=(r.cat==="sale"||r.cat==="mortgage"||r.cat==="godparent");  // padrinho usa de→para
+    const isGenealogical=(r.cat==="filiation"||r.cat==="descent"||r.cat==="inheritance"||r.cat==="godparent");
+    const isTransactional=(r.cat==="sale"||r.cat==="mortgage"||r.cat==="debt"||r.cat==="purchase");
     const logicalArrow=isGenealogical||isTransactional?r.cat:null;
     if(logicalArrow){
-      const [fromId,toId] = isGenealogical ? [r.paraId,r.deId] : [r.deId,r.paraId];  // gen: para→de, tx: de→para
+      const [fromId,toId] = relationFlowIds(r);
       mkEdge(gE,gHit,edges,edgePathDir(fromId,toId),color,dash,{a:fromId,b:toId,cat:r.cat,source:r.source||"",rel:r.relation||"",status:r.status||"",conf:r.inference_confidence||""},true,logicalArrow);
     } else {
       mkEdge(gE,gHit,edges,edgePathGen(r.deId,r.paraId,same),color,dash,{a:r.deId,b:r.paraId,cat:r.cat,source:r.source||"",rel:r.relation||"",status:r.status||"",conf:r.inference_confidence||""},true,null);
@@ -1480,6 +1494,15 @@ function getIcon(key){
   const text = label?.split(' ')?.slice(1).join(' ') || key;
   return `<span title="${text}" style="cursor:help">${emoji}</span>`;
 }
+function relationLineForPerson(person, relation){
+  const sourceName = relation.from || MODEL.pById[relation.deId]?.name || relation.deId;
+  const targetName = relation.to || MODEL.pById[relation.paraId]?.name || relation.paraId;
+  const meta=[relation.status||"",relation.location?`at ${relation.location}`:"",relation.date?`date ${relation.date}`:"",relation.value?`value ${relation.value}`:"",relation.property||"",relation.notes||""].filter(Boolean).join("; ");
+  const text = relation.deId === person.id
+    ? `${esc(relation.relation)} <b>${esc(targetName)}</b>`
+    : `<b>${esc(sourceName)}</b> ${esc(relation.relation)} <b>${esc(targetName)}</b>`;
+  return `<li>${text} <span class="k">${relation.source?`[${esc(relation.source)}]`:""}${meta?" - "+esc(meta):""}</span></li>`;
+}
 function showPerson(id){
   const p=personByNodeId(id); const dById=MODEL.docById;
   let h=`<h2>${esc(p.name)}</h2>`;
@@ -1495,12 +1518,7 @@ function showPerson(id){
   if(p.burial) h+=`<div><span class="k">${getIcon("burial")}</span> ${esc(p.burial)}</div>`;
   if(p.notes) h+=`<div><span class="k">${getIcon("notes")}</span> ${esc(p.notes)}</div>`;
   const rel=MODEL.relations.filter(r=>r.deId===p.id||r.paraId===p.id);
-  if(rel.length){ h+=`<h3>Relations</h3><ul>`+rel.map(r=>{
-    let other, dir;
-    if(r.deId===p.id){ other=r.to; dir=r.relation; }
-    else { other=r.from; dir=r.relation; }
-    const meta=[r.status||"",r.location?`at ${r.location}`:"",r.date?`date ${r.date}`:"",r.value?`value ${r.value}`:"",r.property||"",r.notes||""].filter(Boolean).join("; ");
-    return `<li>${esc(dir)} <b>${esc(other)}</b> <span class="k">${r.source?`[${esc(r.source)}]`:""}${meta?" - "+esc(meta):""}</span></li>`; }).join("")+`</ul>`; }
+  if(rel.length){ h+=`<h3>Relations</h3><ul>`+rel.map(r=>relationLineForPerson(p,r)).join("")+`</ul>`; }
   if(p._props?.length){ h+=`<h3>Properties (purchase/sale) (${p._props.length})</h3><ul>`+p._props.map(pr=>
     `<li><b>${esc(pr.role)}</b> - ${esc((pr.description||pr.title||"").slice(0,80))} <span class="k">${esc(pr.location||"")}${pr.article?" · art. "+pr.article:""}</span><br/><span class="k">🛍️ ${esc(pr.seller||"?")}</span><br/><span class="k">🛒 ${esc(pr.buyer||"?")}</span><br/><span class="k">Data: ${esc(pr.date||"")} · Value: ${esc(pr.value_tx||pr.value||"")} · Doc: ${esc(pr.document||"")}</span></li>`).join("")+`</ul>`; }
   if(p._docs?.length){ h+=`<h3>Documents containing this person (${p._docs.length})</h3>`+p._docs.map(did=>docDetails(dById[did])).join(""); }
@@ -2269,13 +2287,65 @@ const setupSourceModal = () => {
     renderProjectDetails(findProject(event.target.value), document.getElementById("currentProjectDetails"));
   });
 
+  const askProcessScope = (project, mode) => new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:5000;padding:20px";
+
+    const dialog = document.createElement("div");
+    dialog.style.cssText = "width:min(420px,92vw);background:#0f172a;border:1px solid #334155;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.55);padding:18px;color:#e2e8f0";
+
+    const title = document.createElement("div");
+    title.style.cssText = "font-size:14px;font-weight:700;margin-bottom:10px;color:#f8fafc";
+    title.textContent = `Run ${mode.toUpperCase()} for ${project}`;
+
+    const text = document.createElement("div");
+    text.style.cssText = "font-size:12px;line-height:1.6;color:#cbd5e1;margin-bottom:16px";
+    text.textContent = "This project has new or updated images. Choose how to process them:";
+
+    const buttonRow = document.createElement("div");
+    buttonRow.style.cssText = "display:flex;flex-direction:column;gap:8px";
+
+    const makeButton = (label, value, color) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.style.cssText = `padding:10px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;background:${color};color:#fff`;
+      button.addEventListener("click", () => {
+        overlay.remove();
+        resolve(value);
+      });
+      return button;
+    };
+
+    buttonRow.appendChild(makeButton("Process only new", "only_new", "#2563eb"));
+    buttonRow.appendChild(makeButton("Process all", "all", "#10b981"));
+    buttonRow.appendChild(makeButton("Cancel", "cancel", "#475569"));
+
+    dialog.appendChild(title);
+    dialog.appendChild(text);
+    dialog.appendChild(buttonRow);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    const cancelButton = buttonRow.children[2];
+    cancelButton.focus();
+  });
+
   document.querySelectorAll(".projectAction").forEach(button => {
     button.addEventListener("click", async () => {
       const project = document.getElementById("currentProjectSelect").value;
       const mode = button.dataset.mode;
       if(!project) { alert("Select a project"); return; }
+      const projectMeta = findProject(project);
+      const hasPartialNewFiles = !!projectMeta && ((Number(projectMeta.pendingMetadata) || 0) > 0 || (Number(projectMeta.staleMetadata) || 0) > 0);
       const NO_CONFIRM_MODES = new Set(["validate-docs", "build"]);
-      if(!NO_CONFIRM_MODES.has(mode) && !confirm(`Run Mode ${mode.toUpperCase()} for ${project}?`)) return;
+      let onlyNew = false;
+      if(!NO_CONFIRM_MODES.has(mode) && hasPartialNewFiles) {
+        const choice = await askProcessScope(project, mode);
+        if(choice === "cancel") return;
+        onlyNew = choice === "only_new";
+      } else if(!NO_CONFIRM_MODES.has(mode) && !confirm(`Run Mode ${mode.toUpperCase()} for ${project}?`)) {
+        return;
+      }
       const status = document.getElementById("projectActionStatus");
       document.getElementById("projectActionStatusWrap").style.display = "block";
       status.textContent = "Processing…";
@@ -2309,7 +2379,7 @@ const setupSourceModal = () => {
       };
       try {
         const resp = await apiStreamFetch(`/api/projects/${project}/process`, {
-          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({mode, stream: true})
+          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({mode, stream: true, only_new: onlyNew})
         });
         if(resp.headers.get("content-type")?.includes("text/event-stream")) {
           const reader = resp.body.getReader();

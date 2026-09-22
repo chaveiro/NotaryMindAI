@@ -611,6 +611,7 @@ def api_project_process(name):
 
     body = request.get_json(silent=True) or {}
     stream_requested = bool(body.get("stream"))
+    only_new = bool(body.get("only_new"))
 
     if mode == "build":
         commands = [
@@ -622,6 +623,8 @@ def api_project_process(name):
         ]
     else:
         commands = [[sys.executable, str(WORKFLOW_RUNNER), mode, str(project_dir)]]
+        if only_new:
+            commands[0].append("--only-new")
 
     if stream_requested:
         command = commands[0]
