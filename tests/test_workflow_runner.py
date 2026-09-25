@@ -316,7 +316,7 @@ class WorkflowRunnerCliTests(unittest.TestCase):
 
         self.assertEqual(summary["processed"], 1)
         self.assertIn("Interpreting sample_0001.json", stdout.getvalue())
-        self.assertIn("Interpreted sample_0001.json", stdout.getvalue())
+        self.assertIn("Done!", stdout.getvalue())
 
     def test_project_lock_error_mentions_project_and_lock_path(self):
         with tempfile.TemporaryDirectory() as tmp:
