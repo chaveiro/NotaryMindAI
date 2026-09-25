@@ -9,7 +9,8 @@
   header{padding:10px 16px;background:#0f172a;color:#fff;flex:0 0 auto;position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
   header h1{margin:0;font-size:16px} header p{margin:2px 0 0;font-size:11px;color:#cbd5e1}
   .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:7px 16px;background:#e2e8f0;font-size:12px;flex:0 0 auto;border-bottom:1px solid var(--line)}
-  .bar .grp{display:flex;gap:6px;align-items:center}
+  .bar .grp{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  #filters{flex-wrap:wrap}
   .bar button{font-size:12px;padding:4px 10px;border:1px solid #94a3b8;border-radius:6px;background:#fff;cursor:pointer}
   .bar button:hover{background:#f8fafc}
   .bar button.on{background:#0f172a;color:#fff;border-color:#0f172a}
@@ -56,6 +57,10 @@
   .projectDetails{padding:10px;background:#0f172a;border-radius:4px;border:1px solid #334155;font-size:11px;color:#cbd5e1}
   #stats{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
   #projectStatus{display:none;padding:2px 6px;border:1px solid currentColor;border-radius:4px;font-size:10px;font-weight:600}
+  .genAiProcessingBarWrap{display:none;margin:0 0 10px;padding:8px 10px;border:1px solid #334155;border-radius:6px;background:#020617;box-shadow:inset 0 0 0 1px rgba(148,163,184,0.12)}
+  .genAiProcessingBar{height:8px;background:#0f172a;border-radius:999px;overflow:hidden;border:1px solid #334155}
+  .genAiProcessingBarFill{height:100%;width:100%;background:linear-gradient(90deg,#38bdf8,#22c55e);animation:genAiPulse 1.2s ease-in-out infinite alternate}
+  @keyframes genAiPulse{0%{opacity:.4;transform:scaleX(.94)}100%{opacity:1;transform:scaleX(1)}}
   @media(max-width:560px){
     .settingsTab{padding:11px 8px!important}
     .settingsTabLabel{display:none}
@@ -69,9 +74,9 @@
     <p style="margin:0;font-size:13px;color:#94a3b8;font-weight:400">Explorer for Certificates, Relations & Properties</p>
   </div>
   <div style="text-align:right;white-space:nowrap;display:flex;flex-direction:column;gap:2px">
-    <p id="stats" style="margin:0"><span id="statsCounts"></span><span id="projectStatus"></span></p>
+    <p id="stats" style="margin:0"><span id="statsCounts"></span></p>
     <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
-      <p id="sub" style="margin:0"><span id="archiveName" style="cursor:help;font-weight:500;border-bottom:1px dotted #64748b;cursor:pointer" title="Click for info"></span></p>
+      <p id="sub" style="margin:0"><span id="projectStatus"></span>&nbsp;&nbsp;&nbsp;<span id="archiveName" style="cursor:help;font-weight:500;border-bottom:1px dotted #64748b;cursor:pointer" title="Click for info"></span></p>
       <button id="headerSettings" title="Settings" style="background:none;border:none;font-size:18px;cursor:pointer;padding:4px 8px;color:#94a3b8;transition:color 0.2s" onmouseover="this.style.color='#cbd5e1'" onmouseout="this.style.color='#94a3b8'">⚙️</button>
     </div>
   </div>
@@ -131,7 +136,7 @@
               <select id="projectSelect" style="flex:1;padding:8px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;font-size:12px;cursor:pointer">
                 <option value="">Loading projects...</option>
               </select>
-              <button id="btnSwitchProject" style="padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap">Switch</button>
+              <button id="btnLoadProject" style="padding:8px 12px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;white-space:nowrap">Load</button>
             </div>
           </div>
 
@@ -204,6 +209,13 @@
         </select>
         <div id="currentProjectDetails" class="projectDetails" style="margin-bottom:15px"></div>
         <h4 style="margin:15px 0 8px;font-size:11px;color:#94a3b8;text-transform:uppercase">Build Metadata with GenAI</h4>
+        <div id="genAiProcessingBarWrap" class="genAiProcessingBarWrap" aria-live="polite">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;font-size:10px;color:#cbd5e1">
+            <span>Running</span>
+            <span id="genAiProcessingTime" style="font-variant-numeric:tabular-nums;font-weight:700;color:#38bdf8">00:00</span>
+          </div>
+          <div class="genAiProcessingBar"><div class="genAiProcessingBarFill"></div></div>
+        </div>
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <button class="projectAction" data-mode="ocr" style="flex:1;min-width:0;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">📷 OCR</button>
           <button class="projectAction" data-mode="interpret" style="flex:1;min-width:0;padding:10px;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px">🧠 Interpret</button>
@@ -425,11 +437,11 @@ function nearestGenealogySnap(y){
 
 // Initialize app after config loads
 const params = new URLSearchParams(window.location.search);
-const PROJECT_NAME = params.get("project") || "cotimos";  // default: cotimos
+const PROJECT_NAME = params.get("project") || "";
 let LOADED_PROJECT_NAME = PROJECT_NAME;
-const PROJECT_BASE = `../projects/${PROJECT_NAME}`;
-const imgUrl=img=>`${PROJECT_BASE}/imported/`+img;
-const jsonUrl=img=>`${PROJECT_BASE}/metadata/`+img.replace(/\.jpg$/i,".json");
+const projectBase = () => LOADED_PROJECT_NAME ? `../projects/${LOADED_PROJECT_NAME}` : "";
+const imgUrl=img=>`${projectBase()}/imported/`+img;
+const jsonUrl=img=>`${projectBase()}/metadata/`+img.replace(/\.jpg$/i,".json");
 function openImageViewer(imgPath, allImages=[], currentIdx=0){
   const modal=document.createElement("div");
   modal.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:2000;display:flex;align-items:stretch;justify-content:flex-start;flex-direction:row;padding:20px;gap:20px";
@@ -760,8 +772,7 @@ function mkEdge(gE,gHit,edges,d,color,dash,ds,wGen,arrow){
 // O JSON é servido pelo servidor local relativo à página atual.
 let CURRENT_SOURCE = "docs_logical.json";
 const CANDIDATES=[
-  `${PROJECT_BASE}/docs_logical.json`,
-  `docs_logical.json`
+  ...(PROJECT_NAME ? [`../projects/${PROJECT_NAME}/docs_logical.json`] : []),
 ];
 
 async function loadFromUrl(url){
@@ -817,7 +828,7 @@ function updateDocDetailsHeader(imageName) {
 
 async function loadTranscriptionForImage(imageName) {
   try {
-    const jsonPath = `${PROJECT_BASE}/metadata/${imageName.replace(/\.jpg$/i, ".json")}`;
+    const jsonPath = `${projectBase()}/metadata/${imageName.replace(/\.jpg$/i, ".json")}`;
     const response = await fetch(jsonPath);
     if(!response.ok) return "Transcript not available";
     const data = await response.json();
@@ -829,14 +840,17 @@ async function loadTranscriptionForImage(imageName) {
 }
 
 async function load(){
+  if(!PROJECT_NAME) return null;
   for(const u of CANDIDATES){ try{ const r=await fetch(u); if(r.ok) { CURRENT_SOURCE=u; return await r.json(); } }catch(e){} }
   return null;
 }
 
 async function reloadData(data){
-  if(!data) { document.getElementById("empty").innerHTML="<b>"+CONFIG.ui_strings.status.error_loading+"</b>"; return; }
-  document.getElementById("sourceModal").style.display="none";
-  document.getElementById("empty").style.display="none";
+  if(!data) { document.getElementById("empty").innerHTML="<b>Select a project to begin.</b>"; return; }
+  const sourceModal = document.getElementById("sourceModal");
+  const emptyState = document.getElementById("empty");
+  if(sourceModal) sourceModal.style.display="none";
+  if(emptyState) emptyState.style.display="none";
   const rawPersons = Array.isArray(data.persons) ? data.persons.length : 0;
   const rawRelations = Array.isArray(data.relations) ? data.relations.length : 0;
   const rawProperties = Array.isArray(data.properties)
@@ -855,7 +869,7 @@ async function reloadData(data){
     if(!MODEL.properties) { console.error("MODEL.properties is undefined"); return; }
   } catch(e) {
     console.error("Error in reloadData:", e);
-    document.getElementById("empty").innerHTML="<b>"+CONFIG.ui_strings.status.error_processing+": " + e.message + "</b>";
+    if(emptyState) emptyState.innerHTML="<b>"+CONFIG.ui_strings.status.error_processing+": " + e.message + "</b>";
     return;
   }
   if(data.name) {
@@ -865,7 +879,7 @@ async function reloadData(data){
     const archiveLabel = loadedName.toLowerCase() === "cotimos" || norm(dataName) === norm(loadedName)
       ? dataName
       : loadedName;
-    archEl.textContent = archiveLabel;
+    if(archEl) archEl.textContent = archiveLabel;
     const ts = data.timestamp ? new Date(data.timestamp).toLocaleString('en-GB') : "-";
     const model = data.model || "-";
     const desc = data.description || "-";
@@ -878,8 +892,9 @@ async function reloadData(data){
       tooltipContent.textContent = `📄 ${docs} documents · 📄 ${imgs} images\n📅 ${ts}\n🤖 ${model}\n📝 ${desc}`;
     }
   }
-  document.getElementById("statsCounts").textContent=`${MODEL.people.length} persons · ${MODEL.relations.length} relations · ${MODEL.properties.length} properties`;
-  document.getElementById("bar").style.display="flex";
+  if(statsCounts) statsCounts.textContent=`${MODEL.people.length} persons · ${MODEL.relations.length} relations · ${MODEL.properties.length} properties`;
+  const actionBar = document.getElementById("bar");
+  if(actionBar) actionBar.style.display="flex";
   setView("gen");
 
 }
@@ -987,7 +1002,7 @@ svg.addEventListener("click",e=>{ if(dragCtx||panning)return; const p=e.target.c
 const tip=document.createElement("div"); tip.id="tip"; document.body.appendChild(tip);
 function edgeName(id){ return !id?"":id.startsWith("PR:")?(MODEL.properties.find(x=>x.id===id)?.description||id):id.startsWith("DL:")?id.slice(3):(MODEL.pById[id]?.name||id.slice(2)); }
 function tipText(p){ const cat=p.dataset.cat,rel=p.dataset.rel,source=p.dataset.source,status=p.dataset.status,conf=p.dataset.conf;
-  let tip = `${edgeName(p.dataset.b)} → ${rel||CAT_LABEL[cat]||cat} → ${edgeName(p.dataset.a)}`;
+  let tip = `${edgeName(p.dataset.a)} → ${rel||CAT_LABEL[cat]||cat} → ${edgeName(p.dataset.b)}`;
   if(status) tip += ` (${status})`;
   if(conf) tip += ` 🎯 ${conf} confidence`;
   if(source) tip += `  [${source}]`;
@@ -1753,7 +1768,7 @@ function showRelation(p){
   let h=`<h2>Relation</h2><div class="role">${esc(CAT_LABEL[cat]||cat)}${source?` · [${esc(source)}]`:""}`;
   if(conf) h += ` <span style="font-weight:600;color:#7c3aed">🎯 ${esc(conf)}</span>`;
   h += `</div>`;
-  h+=`<div><b>${esc(nm(b))}</b> ${esc(rel||CAT_LABEL[cat]||cat)} <b>${esc(nm(a))}</b></div>`;
+  h+=`<div><b>${esc(nm(a))}</b> ${esc(rel||CAT_LABEL[cat]||cat)} <b>${esc(nm(b))}</b></div>`;
   const full=MODEL.relations.find(r=>r.cat===cat&&((r.deId===a&&r.paraId===b)||(r.deId===b&&r.paraId===a)));
   if(full){
     const meta=[full.status?`Status: ${full.status}`:"",full.location?`Location: ${full.location}`:"",full.date?`Date: ${full.date}`:"",full.value?`Value: ${full.value}`:"",full.property?`Property: ${full.property}`:"",full.notes?`Notes: ${full.notes}`:""].filter(Boolean);
@@ -1814,14 +1829,20 @@ function buildFilters(){
 function rerender(){ view==="gen"?renderGen():view==="doc"?renderDoc():renderProp(); }
 
 function setView(v){ view=v; focusId=null; closePanel();
-  document.getElementById("vGen").classList.toggle("on",v==="gen");
-  document.getElementById("vProp").classList.toggle("on",v==="prop");
-  document.getElementById("vDoc").classList.toggle("on",v==="doc");
-  document.getElementById("barHint").textContent = v==="gen"
-    ? CONFIG.hints.genealogy
-    : v==="prop"
-    ? CONFIG.hints.properties
-    : CONFIG.hints.documents;
+  const vGen = document.getElementById("vGen");
+  const vProp = document.getElementById("vProp");
+  const vDoc = document.getElementById("vDoc");
+  const barHint = document.getElementById("barHint");
+  if(vGen) vGen.classList.toggle("on",v==="gen");
+  if(vProp) vProp.classList.toggle("on",v==="prop");
+  if(vDoc) vDoc.classList.toggle("on",v==="doc");
+  if(barHint) {
+    barHint.textContent = v==="gen"
+      ? CONFIG.hints.genealogy
+      : v==="prop"
+      ? CONFIG.hints.properties
+      : CONFIG.hints.documents;
+  }
   hidden.clear();
   if(v==="gen") { CONFIG.filters.genealogy_default_hidden.forEach(cat => hidden.add(cat)); }
   buildFilters(); rerender();
@@ -1838,11 +1859,19 @@ window.addEventListener("resize",refit);
 (async () => {
   try {
     await loadConfig();
-    const data = await load();
-    reloadData(data);
     setupSourceModal();
+    const data = await load();
+    if(!PROJECT_NAME) {
+      const archiveName = document.getElementById("archiveName");
+      if(archiveName) archiveName.textContent = "No project loaded";
+      document.getElementById("empty").style.display = "block";
+      document.getElementById("empty").innerHTML = "<b>No project loaded.</b><br><br>Open Settings and choose a project from the load list.";
+      return;
+    }
+    reloadData(data);
   } catch(e) {
-    document.getElementById("sub").textContent="Error: "+e.message;
+    const archiveName = document.getElementById("archiveName");
+    if(archiveName) archiveName.textContent = "Error";
     document.getElementById("empty").style.display="block";
     document.getElementById("empty").innerHTML=`<b>Could not load data.</b><br><br>Project: <code>${PROJECT_NAME}</code><br>Check that <code>schema.json</code> and <code>docs_logical.json</code> are accessible.<br><br>Static server alternative: <code>cd NotaryMindAi && python3 -m http.server 8000</code>, then open <code>http://localhost:8000/ui/main.html?project=${PROJECT_NAME}</code>`;
     setupSourceModal();
@@ -1917,6 +1946,12 @@ const setupSourceModal = () => {
     const tooltip = document.getElementById("archiveTooltipContent");
     if(!badge) return;
     if(!project) {
+      if(!LOADED_PROJECT_NAME) {
+        badge.style.display = "none";
+        badge.textContent = "";
+        badge.title = "";
+        return;
+      }
       badge.style.display = "inline-block";
       badge.style.color = "#fbbf24";
       badge.textContent = "⚠ Status unavailable";
@@ -1982,6 +2017,59 @@ const setupSourceModal = () => {
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, char => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   })[char]);
+
+  const ansiColors = {
+    "30": "#000000", "31": "#d32f2f", "32": "#2e7d32", "33": "#f9a825", "34": "#1976d2",
+    "35": "#7b1fa2", "36": "#00838f", "37": "#e0e0e0", "90": "#757575", "91": "#ef5350",
+    "92": "#66bb6a", "93": "#ffca28", "94": "#42a5f5", "95": "#ab47bc", "96": "#26c6da",
+    "97": "#ffffff"
+  };
+
+  const ansiToHtml = (value) => {
+    const text = String(value ?? "");
+    const ansiRegex = /\u001b\[([0-9;]*)m/g;
+    let html = "";
+    let lastIndex = 0;
+    let pending = "";
+    let styles = {};
+
+    const flushPending = () => {
+      if (!pending) return;
+      const styleParts = [];
+      if (styles.bold) styleParts.push("font-weight:700");
+      if (styles.italic) styleParts.push("font-style:italic");
+      if (styles.fg) styleParts.push(`color:${styles.fg}`);
+      if (styles.bg) styleParts.push(`background:${styles.bg}`);
+      html += styleParts.length ? `<span style="${styleParts.join("; ")}">${escapeHtml(pending)}</span>` : escapeHtml(pending);
+      pending = "";
+    };
+
+    while (true) {
+      const match = ansiRegex.exec(text);
+      if (!match) break;
+      pending += text.slice(lastIndex, match.index);
+      flushPending();
+      lastIndex = match.index + match[0].length;
+      const codes = (match[1] || "0").split(";").filter(Boolean);
+      if (!codes.length || codes.includes("0")) {
+        styles = {};
+        continue;
+      }
+      for (const code of codes) {
+        const n = Number(code);
+        if (n === 1) styles.bold = true;
+        else if (n === 3) styles.italic = true;
+        else if (n === 22) styles.bold = false;
+        else if (n === 23) styles.italic = false;
+        else if ((n >= 30 && n <= 37) || (n >= 90 && n <= 97)) styles.fg = ansiColors[String(n)] || null;
+        else if (n >= 40 && n <= 47) styles.bg = ansiColors[String(n - 10)] || null;
+      }
+    }
+
+    pending += text.slice(lastIndex);
+    flushPending();
+    return html;
+  };
 
   const deriveProjectStatus = (project) => {
     const images = Number(project?.images) || 0;
@@ -2107,6 +2195,15 @@ const setupSourceModal = () => {
     if(projects.some(project => project.name === preferred)) select.value = preferred;
   };
 
+  const activateSettingsTab = (name) => {
+    document.querySelectorAll(".settingsTabContent").forEach(t => t.style.display = "none");
+    document.querySelectorAll(".settingsTab").forEach(t => t.style.borderBottom = "2px solid transparent");
+    const tabContent = document.getElementById(`tab-${name}`);
+    const tabButton = document.querySelector(`.settingsTab[data-tab="${name}"]`);
+    if(tabContent) tabContent.style.display = "block";
+    if(tabButton) tabButton.style.borderBottom = "2px solid #2563eb";
+  };
+
   // ========== Tab Switching ==========
   document.querySelectorAll(".settingsTab").forEach(tab => {
     tab.addEventListener("click", (e) => {
@@ -2134,6 +2231,20 @@ const setupSourceModal = () => {
       panel.style.display = panel.dataset.projectPanel === name ? "block" : "none";
     });
   };
+
+  const openProjectPicker = async () => {
+    modal.style.display = "flex";
+    if(currentSource) currentSource.textContent = CURRENT_SOURCE;
+    activateSettingsTab("projects");
+    activateProjectSubtab("load");
+    try {
+      modalSelectedProject = LOADED_PROJECT_NAME;
+      const projects = await fetchProjects();
+      await refreshAllProjectControls(projects, modalSelectedProject);
+    } catch(e) {
+      document.getElementById("projectsListContainer").innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(e.message)}</span>`;
+    }
+  };
   document.querySelectorAll(".projectSubtab").forEach(button => {
     button.addEventListener("click", () => activateProjectSubtab(button.dataset.projectSubtab));
   });
@@ -2160,7 +2271,7 @@ const setupSourceModal = () => {
     renderProjectDetails(findProject(event.target.value), document.getElementById("projectsListContainer"));
   });
 
-  document.getElementById("btnSwitchProject").onclick = async () => {
+  document.getElementById("btnLoadProject").onclick = async () => {
     const name = document.getElementById("projectSelect").value;
     if(!name) { alert("Select a project"); return; }
     const previousProject = LOADED_PROJECT_NAME;
@@ -2317,8 +2428,8 @@ const setupSourceModal = () => {
       return button;
     };
 
-    buttonRow.appendChild(makeButton("Process only new", "only_new", "#2563eb"));
-    buttonRow.appendChild(makeButton("Process all", "all", "#10b981"));
+    buttonRow.appendChild(makeButton("Process only new", "only_new", "#10b981"));
+    buttonRow.appendChild(makeButton("Process all", "all", "#2563eb"));
     buttonRow.appendChild(makeButton("Cancel", "cancel", "#475569"));
 
     dialog.appendChild(title);
@@ -2330,58 +2441,172 @@ const setupSourceModal = () => {
     cancelButton.focus();
   });
 
+  const askProcessContinue = (project, mode) => new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:5000;padding:20px";
+
+    const dialog = document.createElement("div");
+    dialog.style.cssText = "width:min(420px,92vw);background:#0f172a;border:1px solid #334155;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.55);padding:18px;color:#e2e8f0";
+
+    const title = document.createElement("div");
+    title.style.cssText = "font-size:14px;font-weight:700;margin-bottom:10px;color:#f8fafc";
+    title.textContent = `Run ${mode.toUpperCase()} for ${project}`;
+
+    const text = document.createElement("div");
+    text.style.cssText = "font-size:12px;line-height:1.6;color:#cbd5e1;margin-bottom:16px";
+    text.textContent = "Proceed with this run?";
+
+    const buttonRow = document.createElement("div");
+    buttonRow.style.cssText = "display:flex;flex-direction:column;gap:8px";
+
+    const makeButton = (label, value, color) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.style.cssText = `padding:10px 12px;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;background:${color};color:#fff`;
+      button.addEventListener("click", () => {
+        overlay.remove();
+        resolve(value);
+      });
+      return button;
+    };
+
+    buttonRow.appendChild(makeButton("OK", "ok", "#2563eb"));
+    buttonRow.appendChild(makeButton("Cancel", "cancel", "#475569"));
+
+    dialog.appendChild(title);
+    dialog.appendChild(text);
+    dialog.appendChild(buttonRow);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    const okButton = buttonRow.children[0];
+    okButton.focus();
+  });
+
+  let genAiProcessingActive = false;
+  let genAiProcessingStartedAt = 0;
+  let genAiTimerId = null;
+
+  const formatDuration = (seconds) => {
+    const total = Math.max(0, Math.floor(seconds));
+    const mm = String(Math.floor(total / 60)).padStart(2, "0");
+    const ss = String(total % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  };
+
+  const setGenAiProcessingState = (active) => {
+    genAiProcessingActive = active;
+    const wrapper = document.getElementById("genAiProcessingBarWrap");
+    const timer = document.getElementById("genAiProcessingTime");
+    const buttons = document.querySelectorAll(".projectAction[data-mode='ocr'], .projectAction[data-mode='interpret'], .projectAction[data-mode='map'], .projectAction[data-mode='build']");
+    buttons.forEach(btn => {
+      btn.disabled = active;
+      btn.style.opacity = active ? "0.6" : "1";
+      btn.style.cursor = active ? "not-allowed" : "pointer";
+    });
+    if (active) {
+      genAiProcessingStartedAt = Date.now();
+      wrapper.style.display = "block";
+      timer.textContent = "00:00";
+      if (genAiTimerId) clearInterval(genAiTimerId);
+      genAiTimerId = setInterval(() => {
+        const elapsed = (Date.now() - genAiProcessingStartedAt) / 1000;
+        timer.textContent = formatDuration(elapsed);
+      }, 1000);
+      return;
+    }
+    wrapper.style.display = "none";
+    if (genAiTimerId) clearInterval(genAiTimerId);
+    genAiTimerId = null;
+    timer.textContent = "00:00";
+  };
+
   document.querySelectorAll(".projectAction").forEach(button => {
     button.addEventListener("click", async () => {
-      const project = document.getElementById("currentProjectSelect").value;
       const mode = button.dataset.mode;
+      if (!mode || !["ocr", "interpret", "map", "build", "validate-docs"].includes(mode)) return;
+      if (genAiProcessingActive) return;
+      const project = document.getElementById("currentProjectSelect").value;
       if(!project) { alert("Select a project"); return; }
       const projectMeta = findProject(project);
-      const hasPartialNewFiles = !!projectMeta && ((Number(projectMeta.pendingMetadata) || 0) > 0 || (Number(projectMeta.staleMetadata) || 0) > 0);
-      const NO_CONFIRM_MODES = new Set(["validate-docs", "build"]);
+      const hasPendingOrStaleFiles = !!projectMeta && ((Number(projectMeta.pendingMetadata) || 0) > 0 || (Number(projectMeta.staleMetadata) || 0) > 0);
+      const hasNoNewFiles = !hasPendingOrStaleFiles;
       let onlyNew = false;
-      if(!NO_CONFIRM_MODES.has(mode) && hasPartialNewFiles) {
+      if (mode === "map") {
+        const choice = await askProcessContinue(project, mode);
+        if (choice === "cancel") return;
+      } else if(["ocr", "interpret"].includes(mode) && hasPendingOrStaleFiles) {
         const choice = await askProcessScope(project, mode);
         if(choice === "cancel") return;
         onlyNew = choice === "only_new";
-      } else if(!NO_CONFIRM_MODES.has(mode) && !confirm(`Run Mode ${mode.toUpperCase()} for ${project}?`)) {
-        return;
+      } else if(["ocr", "interpret"].includes(mode) && hasNoNewFiles) {
+        const choice = await askProcessContinue(project, mode);
+        if(choice === "cancel") return;
       }
+      setGenAiProcessingState(true);
       const status = document.getElementById("projectActionStatus");
       document.getElementById("projectActionStatusWrap").style.display = "block";
       status.textContent = "Processing…";
-      button.disabled = true;
       const appendStreamText = (text) => {
         if(!text) return;
-        const current = status.textContent || "";
-        const prefix = current && !current.endsWith("\n") ? "\n" : "";
-        status.textContent = `${current}${prefix}${text}`;
+        const html = ansiToHtml(String(text));
+        const currentHtml = status.innerHTML || "";
+        const prefix = currentHtml && !currentHtml.endsWith("\n") ? "\n" : "";
+        status.insertAdjacentHTML("beforeend", `${prefix}${html}`);
         status.scrollTop = status.scrollHeight;
       };
-      const renderResultSummary = (event) => {
-        const lines = [];
-        if(event.status) lines.push(`status: ${event.status}`);
-        if(event.exitCode !== undefined) lines.push(`exitCode: ${event.exitCode}`);
-        if(event.error) lines.push(`error: ${event.error}`);
-        if(event.hint) lines.push(`hint: ${event.hint}`);
-        if(!lines.length) lines.push("result: ok");
-        appendStreamText(`\n--- result ---\n${lines.join("\n")}`);
-      };
-      let pendingJsonBuffer = "";
-      const flushPendingJson = () => {
-        if(!pendingJsonBuffer.trim()) return;
-        try {
-          const parsed = JSON.parse(pendingJsonBuffer);
-          appendStreamText(JSON.stringify(parsed, null, 2));
-        } catch(e) {
-          appendStreamText(pendingJsonBuffer.trim());
-        }
-        pendingJsonBuffer = "";
+      const useStream = ["ocr", "interpret", "map"].includes(mode);
+      const requestFn = useStream ? apiStreamFetch : apiFetch;
+      const showProcessSummaryPopup = (summary) => {
+        if(!summary || typeof summary !== "object") return;
+        const overlay = document.createElement("div");
+        overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:5000;padding:20px";
+
+        const panel = document.createElement("div");
+        panel.style.cssText = "width:min(360px,90vw);background:#0f172a;border:1px solid #334155;border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,0.55);padding:16px;color:#e2e8f0";
+
+        const title = document.createElement("div");
+        title.style.cssText = "font-size:14px;font-weight:700;margin-bottom:12px;color:#f8fafc";
+        title.textContent = `Processing summary — ${mode.toUpperCase()}`;
+
+        const summaryList = document.createElement("div");
+        summaryList.style.cssText = "font-size:12px;line-height:1.6;color:#cbd5e1;display:grid;grid-template-columns:120px 1fr;gap:6px 12px;margin-bottom:14px";
+
+        const failedList = Array.isArray(summary.failed) ? summary.failed : [];
+        const writtenList = Array.isArray(summary.files_written) ? summary.files_written : [];
+        const entries = [
+          summary.status ? ["Status", summary.status] : null,
+          summary.processed !== undefined ? ["Processed", String(summary.processed)] : null,
+          ["Failed", failedList.length ? String(failedList.length) : "0"],
+          ["Files written", writtenList.length ? writtenList.join(", ") : "none"],
+        ].filter(Boolean);
+
+        entries.forEach(([label, value]) => {
+          const labelNode = document.createElement("div");
+          labelNode.innerHTML = `<b>${escapeHtml(label)}:</b>`;
+          const valueNode = document.createElement("div");
+          valueNode.textContent = value;
+          summaryList.appendChild(labelNode);
+          summaryList.appendChild(valueNode);
+        });
+
+        const closeButton = document.createElement("button");
+        closeButton.type = "button";
+        closeButton.textContent = "Close";
+        closeButton.style.cssText = "padding:9px 14px;border:none;border-radius:6px;background:#2563eb;color:#fff;cursor:pointer;font-size:12px;font-weight:600";
+        closeButton.addEventListener("click", () => overlay.remove());
+
+        panel.appendChild(title);
+        panel.appendChild(summaryList);
+        panel.appendChild(closeButton);
+        overlay.appendChild(panel);
+        document.body.appendChild(overlay);
       };
       try {
-        const resp = await apiStreamFetch(`/api/projects/${project}/process`, {
-          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({mode, stream: true, only_new: onlyNew})
+        const resp = await requestFn(`/api/projects/${project}/process`, {
+          method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({mode, stream: useStream, only_new: onlyNew})
         });
-        if(resp.headers.get("content-type")?.includes("text/event-stream")) {
+        if(useStream && resp.headers.get("content-type")?.includes("text/event-stream")) {
           const reader = resp.body.getReader();
           const decoder = new TextDecoder();
           let buffer = "";
@@ -2398,37 +2623,36 @@ const setupSourceModal = () => {
               if(!payload) continue;
               try {
                 const event = JSON.parse(payload);
-                if(event.type === "log" && event.text) {
-                  const text = event.text;
-                  const trimmed = text.trim();
-                  if((trimmed.startsWith("{") || trimmed.startsWith("[")) && (pendingJsonBuffer || trimmed.includes('"operation"') || trimmed.includes('"error"') || trimmed.includes('"status"'))) {
-                    pendingJsonBuffer += (pendingJsonBuffer ? "\n" : "") + text;
-                    try {
-                      const parsed = JSON.parse(pendingJsonBuffer);
-                      appendStreamText(JSON.stringify(parsed, null, 2));
-                      pendingJsonBuffer = "";
-                    } catch(e) {
-                      continue;
+                if (event.type === "log" && event.text) {
+                  appendStreamText(event.text);
+                  continue;
+                }
+                if (event.type === "result") {
+                  const describeFailure = (item) => {
+                    if (item == null) return String(item);
+                    if (typeof item === "string") return item;
+                    if (typeof item === "number" || typeof item === "boolean") return String(item);
+                    if (typeof item === "object") {
+                      try {
+                        return JSON.stringify(item, null, 2);
+                      } catch (e) {
+                        return Object.prototype.toString.call(item);
+                      }
                     }
-                    continue;
+                    return String(item);
+                  };
+                  appendStreamText(`\n--- result ---\nstatus: ${event.status || "unknown"}`);
+                  if (event.exitCode !== undefined) appendStreamText(`exitCode: ${event.exitCode}`);
+                  if (event.operation) appendStreamText(`operation: ${event.operation}`);
+                  if (event.processed !== undefined) appendStreamText(`processed: ${event.processed}`);
+                  if (Array.isArray(event.failed) && event.failed.length) {
+                    appendStreamText(`failed: ${event.failed.map(describeFailure).join("; ")}`);
                   }
-                  flushPendingJson();
-                  appendStreamText(text);
-                } else if(event.type === "result") {
-                  flushPendingJson();
-                  const detail = [event.error, event.hint].filter(Boolean).join("\n");
-                  if(event.status === "error") {
-                    renderResultSummary(event);
-                    throw new Error(event.error || "Processing failed");
-                  }
-                  if(event.exitCode !== undefined && event.exitCode !== 0) {
-                    renderResultSummary(event);
-                    throw new Error(`Process exited with code ${event.exitCode}`);
-                  }
-                  renderResultSummary(event);
-                  if(!status.textContent || status.textContent === "Processing…") {
-                    status.textContent = `${status.textContent || ""}\nMode ${mode.toUpperCase()} completed.`;
-                  }
+                  if (Array.isArray(event.files_written) && event.files_written.length) appendStreamText(`files_written: ${event.files_written.join(", ")}`);
+                  if (event.hint) appendStreamText(`hint: ${event.hint}`);
+                  if (event.error) appendStreamText(`error: ${event.error}`);
+                  showProcessSummaryPopup(event);
+                  break;
                 }
               } catch(e) {
                 if(e instanceof SyntaxError) continue;
@@ -2436,7 +2660,6 @@ const setupSourceModal = () => {
               }
             }
           }
-          flushPendingJson();
           const projects = await fetchProjects();
           await refreshAllProjectControls(projects, project);
           return;
@@ -2444,13 +2667,17 @@ const setupSourceModal = () => {
 
         const data = await resp.json();
         if(!resp.ok) throw new Error([data.error, data.hint, data.output].filter(Boolean).join("\n"));
-        status.textContent = data.output || `Mode ${mode.toUpperCase()} completed.`;
+        if (data.output) {
+          appendStreamText(data.output);
+        } else {
+          appendStreamText(`\nMode ${mode.toUpperCase()} completed.`);
+        }
         const projects = await fetchProjects();
         await refreshAllProjectControls(projects, project);
       } catch(e) {
-        status.textContent = e.message;
+        appendStreamText(`\nError: ${e.message}`);
       } finally {
-        button.disabled = false;
+        setGenAiProcessingState(false);
       }
     });
   });
@@ -2621,17 +2848,7 @@ const setupSourceModal = () => {
 
   const headerSettings = document.getElementById("headerSettings");
   if(headerSettings) {
-    headerSettings.onclick = async () => {
-      modal.style.display = "flex";
-      if(currentSource) currentSource.textContent = CURRENT_SOURCE;
-      try {
-        modalSelectedProject = LOADED_PROJECT_NAME;
-        const projects = await fetchProjects();
-        await refreshAllProjectControls(projects, modalSelectedProject);
-      } catch(e) {
-        document.getElementById("projectsListContainer").innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(e.message)}</span>`;
-      }
-    };
+    headerSettings.onclick = openProjectPicker;
   }
 
   const btnCloseSource = document.getElementById("btnCloseSource");
@@ -2646,7 +2863,9 @@ const setupSourceModal = () => {
     if(e.target === modal && sourceModalMouseDownOnBackdrop) modal.style.display = "none";
   };
 
-  fetchProjects().catch(() => updateHeaderProjectStatus(null));
+  fetchProjects().then(() => {
+    if(!PROJECT_NAME) openProjectPicker();
+  }).catch(() => updateHeaderProjectStatus(null));
 };
 
 // Chamar após DOM estar pronto

@@ -19,6 +19,74 @@ class ApiContractTests(unittest.TestCase):
         self.assertIn("/api/projects/{name}/process", document["paths"])
         self.assertNotIn("model", document["paths"]["/api/projects/{name}/process"]["post"]["requestBody"])
 
+    def test_process_stream_uses_runner_final_summary_payload(self):
+        class FakeStdout:
+            def __init__(self, lines):
+                self._lines = iter(lines)
+
+            def readline(self):
+                try:
+                    return next(self._lines)
+                except StopIteration:
+                    return ""
+
+            def close(self):
+                pass
+
+        with mock.patch("api.server.subprocess.Popen") as popen, app.test_client() as client:
+            process = mock.Mock()
+            process.stdout = FakeStdout([
+                '{"operation": "ocr", "status": "ok", "processed": 1, "failed": [], "files_written": ["a.jpg"]}\n',
+                "",
+            ])
+            process.wait.return_value = 0
+            popen.return_value = process
+
+            response = client.post("/api/projects/demo/process", json={"mode": "ocr", "stream": True})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn('"operation": "ocr"', body)
+        self.assertIn('"status": "ok"', body)
+        self.assertIn('"processed": 1', body)
+
+    def test_process_stream_detects_pretty_printed_runner_summary(self):
+        class FakeStdout:
+            def __init__(self, lines):
+                self._lines = iter(lines)
+
+            def readline(self):
+                try:
+                    return next(self._lines)
+                except StopIteration:
+                    return ""
+
+            def close(self):
+                pass
+
+        with mock.patch("api.server.subprocess.Popen") as popen, app.test_client() as client:
+            process = mock.Mock()
+            process.stdout = FakeStdout([
+                '{\n',
+                '  "operation": "ocr",\n',
+                '  "status": "ok",\n',
+                '  "processed": 1,\n',
+                '  "failed": [],\n',
+                '  "files_written": ["a.jpg"]\n',
+                '}\n',
+                "",
+            ])
+            process.wait.return_value = 0
+            popen.return_value = process
+
+            response = client.post("/api/projects/demo/process", json={"mode": "ocr", "stream": True})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_data(as_text=True)
+        self.assertIn('"type": "result"', body)
+        self.assertIn('"operation": "ocr"', body)
+        self.assertIn('"status": "ok"', body)
+
     def test_process_stream_returns_sse_with_live_auth_code(self):
         class FakeStdout:
             def __init__(self, lines):

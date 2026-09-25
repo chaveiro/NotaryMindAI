@@ -19,7 +19,7 @@ if __package__ in (None, ""):
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
 
-from workflow_runner.common import RunnerError, build_runtime_config, selected_model
+from workflow_runner.common import RunnerError, build_runtime_config, build_run_summary, selected_model
 from workflow_runner.tasks.ocr_task import run_ocr
 from workflow_runner.tasks.interpret_task import run_interpret
 from workflow_runner.tasks.map_task import run_map
@@ -131,21 +131,43 @@ def main() -> int:
                 summary = run_interpret(project, model, only_new=only_new)
             else:
                 summary = run_map(project, model, only_new=only_new)
-        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        summary = build_run_summary(
+            operation,
+            model=model,
+            processed=int(summary.get("processed", 0)),
+            failed=summary.get("failed", []),
+            files_written=summary.get("files_written", []),
+            skipped=summary.get("skipped"),
+            documents=summary.get("documents"),
+            images_mapped=summary.get("images_mapped"),
+            status=(summary.get("status") or ("error" if summary.get("failed") else "ok")),
+            **{k: v for k, v in summary.items() if k not in {"operation", "model", "status", "processed", "failed", "files_written", "skipped", "documents", "images_mapped"}},
+        )
+        print(json.dumps(summary, ensure_ascii=False, separators=(",", ":")))
         return 1 if summary.get("failed") else 0
     except RunnerError as error:
         message = str(error)
         hint = message if "Please visit" in message or "GitHub Copilot" in message else ""
-        print(
-            json.dumps({"ok": False, "operation": operation, "error": message, "hint": hint}, ensure_ascii=False),
-            file=sys.stderr,
+        summary = build_run_summary(
+            operation,
+            model=model,
+            status="error",
+            processed=0,
+            failed=[message],
+            files_written=[],
         )
+        print(json.dumps(summary, ensure_ascii=False), file=sys.stderr)
         return 1
     except Exception as error:
-        print(
-            json.dumps({"ok": False, "operation": operation, "error": f"unexpected runner error: {error}", "hint": ""}, ensure_ascii=False),
-            file=sys.stderr,
+        summary = build_run_summary(
+            operation,
+            model=model,
+            status="error",
+            processed=0,
+            failed=[f"unexpected runner error: {error}"],
+            files_written=[],
         )
+        print(json.dumps(summary, ensure_ascii=False), file=sys.stderr)
         return 1
 
 

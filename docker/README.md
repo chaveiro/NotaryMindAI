@@ -1,6 +1,7 @@
 # Docker build and run
 
-This directory contains the container image used by the NotaryMindAI API and the local compose setup.
+This directory contains the container image used by the NotaryMindAI API and the
+supporting Docker documentation.
 
 ## Build the image
 
@@ -13,7 +14,7 @@ From the repository root:
 Or directly:
 
 ```bash
-docker build -f docker-compose/Dockerfile -t notarymindai:latest .
+docker build -f docker/Dockerfile -t notarymindai:latest .
 ```
 
 ## Run the API in a container
@@ -21,24 +22,22 @@ docker build -f docker-compose/Dockerfile -t notarymindai:latest .
 ```bash
 docker run --rm \
   -p 8787:8787 \
+  -v notarymindai-projects:/workspace/projects \
   --env PORT=8787 \
   --env GENAI_PROVIDER=copilot \
   --env GITHUB_COPILOT_API_BASE=https://api.githubcopilot.com \
   --env NOTARYMIND_OCR_MODEL=github_copilot/claude-opus-4.8 \
-  --env NOTARYMIND_INTERPRET_MODEL=github_copilot/haiku-4.5 \
-  --env NOTARYMIND_MAP_MODEL=github_copilot/haiku-4.5 \
+  --env NOTARYMIND_INTERPRET_MODEL=github_copilot/claude-opus-4.8 \
+  --env NOTARYMIND_MAP_MODEL=github_copilot/claude-opus-4.8 \
   notarymindai:latest
 ```
 
 The service starts the Flask API on port 8787.
 
-## Compose
-
-```bash
-docker compose -f docker-compose/docker-compose.yml up --build
-```
-
-This uses the same Dockerfile and loads environment values from the shell or a `.env` file.
+The image includes the application code plus a bundled seed copy of `projects/demo`.
+When you run the container with a Docker volume mounted to `/workspace/projects`,
+the default startup command copies the seed `demo` project into that volume if it
+is missing.
 
 ## Common environment variables
 
@@ -65,5 +64,7 @@ ANTHROPIC_API_KEY=...
 ## Notes
 
 - The container runs from the repository root at `/workspace`.
-- Project files live under the mounted repository tree.
+- Application code is baked into the image.
+- Runtime-created projects persist in whichever Docker volume you mount to `/workspace/projects`.
+- The container startup command seeds `demo` into that volume automatically on first start.
 - If you are debugging locally, use the same environment variables as the host process to ensure model selection matches the worker configuration.

@@ -15,6 +15,7 @@ from workflow_runner.common import (
     _metadata_files,
     _read_json,
     _request_json,
+    build_run_summary,
 )
 
 INTERPRET_TASK = """You are interpreting an already-extracted historical document transcript.
@@ -192,6 +193,7 @@ def run_interpret(project: Path, model: str, *, only_new: bool = False) -> dict[
         )
         by_stem = {image.stem: image for image in imported}
         filtered: list[Path] = []
+        existing_stems = {path.stem for path in metadata_files}
         for path in metadata_files:
             image = by_stem.get(path.stem)
             if image is None:
@@ -201,12 +203,18 @@ def run_interpret(project: Path, model: str, *, only_new: bool = False) -> dict[
                     filtered.append(path)
             except OSError:
                 filtered.append(path)
+        for image in imported:
+            if image.stem not in existing_stems:
+                filtered.append(project / "metadata" / f"{image.stem}.json")
         metadata_files = filtered
 
     written = []
     failures = []
     for path in metadata_files:
         try:
+            print(f"Interpreting {path.name} ...", flush=True)
+            if not path.exists():
+                raise RunnerError(f"Missing metadata file {path.name}; run OCR first")
             current = _read_json(path)
             transcript = current.get("full_transcript", "")
             if not transcript:
@@ -221,10 +229,12 @@ def run_interpret(project: Path, model: str, *, only_new: bool = False) -> dict[
             merged_metadata["method"] = "workflow_runner.interpret"
             validated["ocr_metadata"] = merged_metadata
             _atomic_json(path, validated)
+            print(f"Done!", flush=True)
             written.append(path.name)
         except RunnerError as error:
+            print(f"Interpret failed for {path.name}: {error}", flush=True)
             failures.append({"file": path.name, "error": str(error)})
-    return {"operation": "interpret", "model": model, "processed": len(written), "failed": failures, "files_written": written}
+    return build_run_summary("interpret", model=model, processed=len(written), failed=failures, files_written=written)
 
 
 __all__ = ["INTERPRET_TASK", "INTERPRET_SCHEMA", "run_interpret"]

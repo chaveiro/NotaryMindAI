@@ -151,7 +151,7 @@ REQUIREMENTS:
 
 Please generate:
 1. Dockerfile for api/
-2. Example docker-compose.yml (full stack)
+2. Example docker run command with a mounted projects volume
 3. .dockerignore file
 ```
 

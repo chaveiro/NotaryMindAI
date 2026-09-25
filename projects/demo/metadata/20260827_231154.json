@@ -1,0 +1,224 @@
+{
+  "image": "20260827_231154.jpg",
+  "document_type": "Certidão de baptismo",
+  "document_date": "1885-01-22",
+  "location": "Rabaçal, concelho da Meda, diocese de Lamego",
+  "full_transcript": "Certifico sob minha palavra d'honra que sendo um dos livros de baptismos d'esta freguezia do Rabaçal n'elle a folhas cento e trinta e sete encontrei um assento do theor seguinte. Aos vinte e dois dias do mez de janeiro do anno de mil oitocentos e oitenta e cinco n'esta Egreja parochial de S. Paulo do Rabaçal, concelho da Meda, diocese de Lamego, baptisei solemnemente um individuo do sexo masculino a quem dei o nome de Francisco Sebastião que nasceu n'este povo no dia onze d'este mez e anno; filho legitimo, primeiro d'este nome, d'Antonio Maria, jornaleiro e Justina de Jesus, governante de casa, naturaes d'este povo aonde foram recebidos e são moradores, neto paterno de Jose do Alvaro e Josepha Antonia e materno de Manuel Fernandes e Bernardina de Jesus, todos d'esta freguezia. Foi padrinho Francisco Antonio e madrinha Maria Felicidade, casados, proprietarios d'este povo, os quaes sei serem os proprios. E para constar lavrei em duplicado este assento que lido e conferido perante os padrinhos o assigno só por elles não saberem escrever. Era ut retro. O Paracho Francisco Jose Ferreira da Encarnação. Na",
+  "entities": {
+    "names": [
+      "Francisco Sebastião",
+      "Antonio Maria",
+      "Justina de Jesus",
+      "Jose do Alvaro",
+      "Josepha Antonia",
+      "Manuel Fernandes",
+      "Bernardina de Jesus",
+      "Francisco Antonio",
+      "Maria Felicidade",
+      "Francisco Jose Ferreira da Encarnação"
+    ],
+    "dates": [
+      "1885-01-22",
+      "1885-01-11"
+    ],
+    "places": [
+      "Rabaçal",
+      "S. Paulo do Rabaçal",
+      "concelho da Meda",
+      "diocese de Lamego"
+    ],
+    "values": [
+      "100 réis"
+    ]
+  },
+  "properties": [],
+  "persons": [
+    {
+      "name": "Francisco Sebastião",
+      "gender": "M",
+      "birth": "1885-01-11",
+      "natural": "Rabaçal",
+      "roles": [
+        "baptizado"
+      ],
+      "notes": "Filho legítimo, primeiro d'este nome."
+    },
+    {
+      "name": "Antonio Maria",
+      "gender": "M",
+      "profession": "jornaleiro",
+      "natural": "Rabaçal",
+      "residencia": "Rabaçal",
+      "roles": [
+        "pai"
+      ]
+    },
+    {
+      "name": "Justina de Jesus",
+      "gender": "F",
+      "profession": "governante de casa",
+      "natural": "Rabaçal",
+      "residencia": "Rabaçal",
+      "roles": [
+        "mãe"
+      ]
+    },
+    {
+      "name": "Jose do Alvaro",
+      "gender": "M",
+      "roles": [
+        "avô paterno"
+      ],
+      "notes": "D'esta freguezia."
+    },
+    {
+      "name": "Josepha Antonia",
+      "gender": "F",
+      "roles": [
+        "avó paterna"
+      ],
+      "notes": "D'esta freguezia."
+    },
+    {
+      "name": "Manuel Fernandes",
+      "gender": "M",
+      "roles": [
+        "avô materno"
+      ],
+      "notes": "D'esta freguezia."
+    },
+    {
+      "name": "Bernardina de Jesus",
+      "gender": "F",
+      "roles": [
+        "avó materna"
+      ],
+      "notes": "D'esta freguezia."
+    },
+    {
+      "name": "Francisco Antonio",
+      "gender": "M",
+      "profession": "proprietario",
+      "residencia": "Rabaçal",
+      "roles": [
+        "padrinho"
+      ],
+      "notes": "Casado; não sabe escrever."
+    },
+    {
+      "name": "Maria Felicidade",
+      "gender": "F",
+      "profession": "proprietaria",
+      "residencia": "Rabaçal",
+      "roles": [
+        "madrinha"
+      ],
+      "notes": "Casada; não sabe escrever."
+    },
+    {
+      "name": "Francisco Jose Ferreira da Encarnação",
+      "gender": "M",
+      "roles": [
+        "pároco"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "from": "Francisco Sebastião",
+      "to": "Antonio Maria",
+      "relation": "filho de",
+      "attribute": "filiation",
+      "source": "explicit",
+      "inferedbyai": false,
+      "inference_type": "explicit"
+    },
+    {
+      "from": "Francisco Sebastião",
+      "to": "Justina de Jesus",
+      "relation": "filho de",
+      "attribute": "filiation",
+      "source": "explicit",
+      "inferedbyai": false,
+      "inference_type": "explicit"
+    },
+    {
+      "from": "Antonio Maria",
+      "to": "Justina de Jesus",
+      "relation": "casado com",
+      "attribute": "marriage",
+      "source": "explicit",
+      "inferedbyai": false,
+      "inference_type": "explicit"
+    },
+    {
+      "from": "Antonio Maria",
+      "to": "Jose do Alvaro",
+      "relation": "filho de",
+      "attribute": "filiation",
+      "source": "explicit",
+      "inferedbyai": false,
+      "inference_type": "explicit"
+    },
+    {
+      "from": "Antonio Maria",
+      "to": "Josepha Antonia",
+      "relation": "filho de",
+      "attribute": "filiation",
+      "source": "explicit",
+      "inferedbyai": false,
+      "inference_type": "explicit"
+    },
+    {
+      "from": "Justina de Jesus",
+      "to": "Manuel Fernandes",
+      "relation": "filha de",
+      "attribute": "filiation",
+      "source": "explicit",
+      "inferedbyai": false,
+      "inference_type": "explicit"
+    },
+    {
+      "from": "Justina de Jesus",
+      "to": "Bernardina de Jesus",
+      "relation": "filha de",
+      "attribute": "filiation",
+      "source": "explicit",
+      "inferedbyai": false,
+      "inference_type": "explicit"
+    },
+    {
+      "from": "Francisco Antonio",
+      "to": "Francisco Sebastião",
+      "relation": "padrinho de",
+      "attribute": "godparent",
+      "source": "explicit",
+      "inferedbyai": false,
+      "inference_type": "explicit"
+    },
+    {
+      "from": "Maria Felicidade",
+      "to": "Francisco Sebastião",
+      "relation": "madrinha de",
+      "attribute": "godparent",
+      "source": "explicit",
+      "inferedbyai": false,
+      "inference_type": "explicit"
+    },
+    {
+      "from": "Francisco Antonio",
+      "to": "Maria Felicidade",
+      "relation": "casado com",
+      "attribute": "marriage",
+      "source": "explicit",
+      "inferedbyai": false,
+      "inference_type": "explicit"
+    }
+  ],
+  "ocr_metadata": {
+    "status": "partial",
+    "notes": "Handwritten baptism certificate with 100 réis Imposto do Sello stamp; text continues beyond page bottom.",
+    "genai_model": "github_copilot/claude-opus-4.8",
+    "method": "workflow_runner.interpret"
+  }
+}

@@ -201,6 +201,40 @@ def _metadata_files(project: Path) -> list[Path]:
     return sorted((project / "metadata").glob("*.json"))
 
 
+def build_run_summary(
+    operation: str,
+    *,
+    model: str | None = None,
+    status: str | None = None,
+    processed: int = 0,
+    failed: list[dict[str, Any] | str] | None = None,
+    files_written: list[str] | None = None,
+    skipped: int | None = None,
+    documents: int | None = None,
+    images_mapped: int | None = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    summary: dict[str, Any] = {
+        "operation": operation,
+        "status": status or ("error" if failed else "ok"),
+        "processed": int(processed),
+        "failed": list(failed or []),
+        "files_written": list(files_written or []),
+    }
+    if model is not None:
+        summary["model"] = model
+    if skipped is not None:
+        summary["skipped"] = int(skipped)
+    if documents is not None:
+        summary["documents"] = int(documents)
+    if images_mapped is not None:
+        summary["images_mapped"] = int(images_mapped)
+    for key, value in extra.items():
+        if value is not None:
+            summary[key] = value
+    return summary
+
+
 def _atomic_json(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
@@ -292,6 +326,7 @@ def _request_json(messages: list[dict[str, Any]], model: str, image: Path | None
             completion_kwargs["response_format"] = {"type": "json_object"}
         completion_kwargs.update(config.get("request_kwargs", {}))
 
+        #litellm._turn_on_debug()
         response = litellm.completion(**completion_kwargs)
         return _json_from_text(_extract_text(response))
     except Exception as error:  # pragma: no cover

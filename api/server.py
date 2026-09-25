@@ -47,6 +47,9 @@ PORT = int(os.environ.get("PORT", 8787))
 SUPPORTED_IMPORT_SUFFIXES = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf")
 WORKFLOW_RUNNER = ROOT / "workflow_runner/runner.py"
 
+CANONICAL_SUMMARY_KEYS = {"operation", "status", "processed", "failed", "files_written"}
+
+
 def _extract_json_payload(text: str) -> dict:
     cleaned = (text or "").strip()
     if not cleaned:
@@ -68,8 +71,7 @@ def _stream_process_output(command: list[str], cwd: Path):
         bufsize=1,
         universal_newlines=True,
     )
-    last_error = ""
-    last_hint = ""
+    saw_summary = False
     try:
         if process.stdout is None:
             yield f"data: {json.dumps({'type': 'result', 'status': 'error', 'error': 'No runner output available'}, ensure_ascii=False)}\n\n"
@@ -79,22 +81,30 @@ def _stream_process_output(command: list[str], cwd: Path):
             text = line.rstrip("\r\n")
             if not text:
                 continue
+
             payload = _extract_json_payload(text)
             if payload:
-                if isinstance(payload.get("error"), str):
-                    last_error = payload.get("error", "")
-                if isinstance(payload.get("hint"), str):
-                    last_hint = payload.get("hint", "")
-                if payload.get("error") or payload.get("hint"):
-                    yield f"data: {json.dumps({'type': 'log', 'text': payload.get('hint') or payload.get('error') or text}, ensure_ascii=False)}\n\n"
+                is_summary = isinstance(payload, dict) and CANONICAL_SUMMARY_KEYS.issubset(payload.keys())
+                if is_summary:
+                    saw_summary = True
+                    yield f"data: {json.dumps({'type': 'result', **payload}, ensure_ascii=False)}\n\n"
+                    continue
+
             yield f"data: {json.dumps({'type': 'log', 'text': text}, ensure_ascii=False)}\n\n"
 
+        if saw_summary:
+            return
+
         return_code = process.wait()
-        result = {'type': 'result', 'status': 'ok' if return_code == 0 else 'error', 'exitCode': return_code}
-        if return_code != 0:
-            result['error'] = last_error or 'Processing failed'
-            if last_hint:
-                result['hint'] = last_hint
+        result = {
+            'type': 'result',
+            'operation': command[2] if len(command) > 2 else 'unknown',
+            'status': 'ok' if return_code == 0 else 'error',
+            'processed': 0,
+            'failed': [] if return_code == 0 else ['Processing failed'],
+            'files_written': [],
+            'exitCode': return_code,
+        }
         yield f"data: {json.dumps(result, ensure_ascii=False)}\n\n"
     except Exception as exc:
         yield f"data: {json.dumps({'type': 'result', 'status': 'error', 'error': str(exc)}, ensure_ascii=False)}\n\n"

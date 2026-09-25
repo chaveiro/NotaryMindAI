@@ -1,0 +1,39 @@
+{
+  "image": "20260827_231206.jpg",
+  "document_type": "certificate/record closing (certidão)",
+  "document_date": "1913-10-27",
+  "location": "Rabaçal",
+  "full_transcript": "da mais continha ó dito assento que para aqui fielmente copiei. E por verdade [?] aqui me assigno. Rabaçal 27 d'outubro de 1913 e treze.\nO Parocho Antonio Jaquim Fachada",
+  "entities": {
+    "names": [
+      "Antonio Jaquim Fachada"
+    ],
+    "dates": [
+      "1913-10-27"
+    ],
+    "places": [
+      "Rabaçal"
+    ],
+    "values": []
+  },
+  "properties": [],
+  "persons": [
+    {
+      "name": "Antonio Jaquim Fachada",
+      "roles": [
+        "Parocho"
+      ],
+      "variants": [],
+      "birthplace": "",
+      "gender": "M",
+      "notes": "Parish priest who copied and signed the record at Rabaçal on 1913-10-27."
+    }
+  ],
+  "relations": [],
+  "ocr_metadata": {
+    "status": "partial",
+    "notes": "Handwritten closing of a parish record; lower half of page blank. Some words uncertain.",
+    "genai_model": "github_copilot/claude-opus-4.8",
+    "method": "workflow_runner.interpret"
+  }
+}

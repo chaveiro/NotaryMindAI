@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
+
+try:
+    import pymupdf  # type: ignore
+except ImportError:  # pragma: no cover
+    pymupdf = None
 
 from workflow_runner.common import (
     RunnerError,
@@ -16,6 +22,7 @@ from workflow_runner.common import (
     _metadata_files,
     _read_json,
     _request_json,
+    build_run_summary,
 )
 
 OCR_TASK = """You are extracting the raw archival transcription from one historical image or PDF page.
@@ -164,6 +171,38 @@ def _validate_ocr_result(result: Any, *, image_name: str) -> dict[str, Any]:
     return result
 
 
+def render_pdf_pages_to_images(project: Path, pdf_path: Path) -> list[Path]:
+    if not pdf_path.exists():
+        raise RunnerError(f"PDF not found: {pdf_path}")
+
+    if pymupdf is None:
+        raise RunnerError(f"PyMuPDF is required to render PDF pages for {pdf_path.name}")
+
+    processed_dir = project / "processed_pdf"
+    processed_dir.mkdir(parents=True, exist_ok=True)
+    page_images: list[Path] = []
+
+    doc = pymupdf.open(str(pdf_path))
+    try:
+        for index in range(len(doc)):
+            page = doc[index]
+            image_path = pdf_path.with_name(f"{pdf_path.stem}_{index + 1:04d}.jpg")
+            pix = page.get_pixmap(matrix=pymupdf.Matrix(2, 2))
+            pix.save(str(image_path), jpg_quality=92)
+            page_images.append(image_path)
+    finally:
+        doc.close()
+
+    if not page_images:
+        raise RunnerError(f"No page images were generated for {pdf_path.name}")
+
+    target_pdf = processed_dir / pdf_path.name
+    if target_pdf.exists():
+        target_pdf.unlink()
+    shutil.move(str(pdf_path), str(target_pdf))
+    return page_images
+
+
 def run_ocr(project: Path, model: str, *, only_new: bool = False) -> dict[str, Any]:
     imported = sorted(p for p in (project / "imported").iterdir() if p.suffix.lower() in SUPPORTED_EXTENSIONS)
     metadata = project / "metadata"
@@ -184,24 +223,28 @@ def run_ocr(project: Path, model: str, *, only_new: bool = False) -> dict[str, A
     written = []
     failures = []
     for image in targets:
-        try:
-            prompt = f"{OCR_TASK}\n\nGlossary:\n{_glossary(project)}"
-            result = _request_json([{"role": "user", "content": prompt}], model, image)
-            validated = _validate_ocr_result(result, image_name=image.name)
-            validated.setdefault("ocr_metadata", {})["genai_model"] = model
-            validated["ocr_metadata"]["method"] = "workflow_runner.ocr"
-            _atomic_json(metadata / f"{image.stem}.json", validated)
-            written.append(image.name)
-        except RunnerError as error:
-            failures.append({"file": image.name, "error": str(error)})
-    return {
-        "operation": "ocr",
-        "model": model,
-        "processed": len(written),
-        "skipped": len(imported) - len(targets),
-        "failed": failures,
-        "files_written": written,
-    }
+        page_images = [image]
+        if image.suffix.lower() == ".pdf":
+            page_images = render_pdf_pages_to_images(project, image)
+        for page_image in page_images:
+            try:
+                prompt = f"{OCR_TASK}\n\nGlossary:\n{_glossary(project)}"
+                result = _request_json([{"role": "user", "content": prompt}], model, page_image)
+                validated = _validate_ocr_result(result, image_name=page_image.name)
+                validated.setdefault("ocr_metadata", {})["genai_model"] = model
+                validated["ocr_metadata"]["method"] = "workflow_runner.ocr"
+                _atomic_json(metadata / f"{page_image.stem}.json", validated)
+                written.append(page_image.name)
+            except RunnerError as error:
+                failures.append({"file": page_image.name, "error": str(error)})
+    return build_run_summary(
+        "ocr",
+        model=model,
+        processed=len(written),
+        skipped=len(imported) - len(targets),
+        failed=failures,
+        files_written=written,
+    )
 
 
-__all__ = ["OCR_TASK", "OCR_SCHEMA", "run_ocr"]
+__all__ = ["OCR_TASK", "OCR_SCHEMA", "render_pdf_pages_to_images", "run_ocr"]

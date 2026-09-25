@@ -11,7 +11,7 @@ fi
 
 echo "Building Docker image: ${IMAGE_NAME}"
 docker build \
-  --file "${ROOT_DIR}/docker-compose/Dockerfile" \
+  --file "${ROOT_DIR}/docker/Dockerfile" \
   --tag "${IMAGE_NAME}" \
   "${ROOT_DIR}"
 

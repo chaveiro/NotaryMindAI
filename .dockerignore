@@ -1,0 +1,16 @@
+*
+!api/
+!api/**
+!docker/
+!docker/**
+!projects/
+!projects/demo/
+!projects/demo/**
+!skills/
+!skills/transcript/
+!skills/transcript/**
+!ui/
+!ui/**
+!workflow_runner/
+!workflow_runner/**
+!build_docker.sh

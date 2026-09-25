@@ -79,7 +79,7 @@ NotaryMindAi/  (monorepo root)
 | **Data** | JSON + Filesystem | Genealogical archives, project metadata | `projects/` |
 | **Tools** | Python/TypeScript | GenAI pipeline, build, validation | `skills/` |
 | **Workflow runner** | Python | Model selection and GenAI operations | `workflow_runner/` |
-| **Deployment** | Docker Compose | Single-container API and UI runtime | `docker-compose/` |
+| **Deployment** | Docker | Single-container API and UI runtime | `docker/` |
 
 Each project contains imported source files, per-image metadata, project rules,
 the logical document map, and the consolidated `docs_logical.json` output.
@@ -818,7 +818,7 @@ Top 25 results are returned sorted by relevance score.
 - ✅ GenAI integration across API, UI, and transcription workflows
 - ✅ Automated testing
 - ✅ API documentation at `/api/openapi.json`
-- ✅ Docker and docker-compose setup
+- ✅ Docker setup
 - ✅ CI pipeline
 
 ## 🛠️ Current Priorities

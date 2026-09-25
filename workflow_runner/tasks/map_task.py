@@ -13,6 +13,7 @@ from workflow_runner.common import (
     _metadata_files,
     _read_json,
     _request_json,
+    build_run_summary,
 )
 
 MAP_TASK = """You are creating the logical document map for a project from image metadata and transcripts.
@@ -96,14 +97,16 @@ def run_map(project: Path, model: str, *, only_new: bool = False) -> dict[str, A
         }
         metadata = [item for item in metadata if item.get("image") not in existing_images]
         if not metadata:
-            return {
-                "operation": "map",
-                "model": model,
-                "documents": len(existing.get("logical_documents", [])),
-                "images_mapped": len(existing_images),
-                "files_written": [existing_path.name],
-                "skipped": True,
-            }
+            return build_run_summary(
+                "map",
+                model=model,
+                processed=0,
+                failed=[],
+                files_written=[existing_path.name],
+                skipped=len(existing_images),
+                documents=len(existing.get("logical_documents", [])),
+                images_mapped=len(existing_images),
+            )
 
     prompt = f"""{MAP_TASK}
 
@@ -135,7 +138,15 @@ Glossary:
         result = {"schema_version": "2.0", "logical_documents": merged_documents}
 
     _atomic_json(existing_path, result)
-    return {"operation": "map", "model": model, "documents": len(result["logical_documents"]), "images_mapped": len(seen), "files_written": [existing_path.name]}
+    return build_run_summary(
+        "map",
+        model=model,
+        processed=len(seen),
+        failed=[],
+        files_written=[existing_path.name],
+        documents=len(result["logical_documents"]),
+        images_mapped=len(seen),
+    )
 
 
 __all__ = ["MAP_TASK", "MAP_SCHEMA", "run_map"]
