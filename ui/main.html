@@ -2877,7 +2877,21 @@ const setupSourceModal = () => {
       }
     }
     if(!PROJECT_NAME) openProjectPicker();
-  }).catch(() => updateHeaderProjectStatus(null));
+  }).catch(async () => {
+    if(LOAD_URL) {
+      try {
+        const data = await loadFromUrl(LOAD_URL);
+        if(data) {
+          await reloadData(data);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to load remote data from loadurl after API failure:", e);
+      }
+    }
+    updateHeaderProjectStatus(null);
+    if(!PROJECT_NAME) openProjectPicker();
+  });
 };
 
 // Chamar após DOM estar pronto
