@@ -2,9 +2,9 @@
 
 > **Extract, transcribe, and structure genealogical and notarial records from historical manuscripts using GenAI with paleographic accuracy.**
 
-**Architecture:** Project-centric monorepo
-**Status:** Active development with multi-project support
-**Language:** English UI/API; archival examples preserve source-language text
+## Demonstration
+
+[Click here to open demo project](https://html-preview.github.io/?url=https://github.com/chaveiro/NotaryMindAI/blob/main/ui/main.html?dummy=dummy&loadurl=https://raw.githubusercontent.com/chaveiro/NotaryMindAI/refs/heads/main/projects/demo/docs_logical.json)
 
 ---
 
@@ -37,9 +37,6 @@ The system is organized as a **monorepo** with clear separation of concerns:
 ```
 NotaryMindAi/  (monorepo root)
 │
-├── skills/transcript/
-│   ├── GLOSSARY-TEMPLATE.md       New-project glossary source with inert real examples
-│   ├── GENDER-RULES-TEMPLATE.json New-project gender inference keywords
 │
 ├── api/                           ← BACKEND (Python Flask)
 │   ├── server.py                  REST API server
@@ -62,6 +59,8 @@ NotaryMindAi/  (monorepo root)
 │
 ├── skills/                        ← TOOLS (GenAI pipeline)
 │   └── transcript/
+│       ├── GLOSSARY-TEMPLATE.md       New-project glossary source with inert real examples
+│       ├── GENDER-RULES-TEMPLATE.json New-project gender inference keywords
 │       ├── build_docs_logical.py
 │       ├── find_new_docs.ts
 │       ├── validate_docs.py
@@ -466,27 +465,6 @@ Before delivering a project:
 
 ---
 
-## 📞 Support
-
-**For users:**
-- See **SKILL.md** for workflows and GenAI prompts
-- Check **README.md** for quick start and setup
-- Review **SCHEMA.md** for data format
-
-**For developers:**
-- Check Python scripts for implementation details
-- Review **SCHEMA.md** for immutable data contract
-- Update **SKILL.md** for workflow documentation
-
----
-
-## 📄 License
-
-Freely reusable for historical, genealogical, administrative, and archival projects.
-
-
----
-
 ## 🎯 Next Steps
 
 ### For New Users
@@ -806,31 +784,6 @@ Top 25 results are returned sorted by relevance score.
 
 ---
 
-
----
-
-## 📈 Current State
-
-- ✅ Multi-project support
-- ✅ Drag-drop file import
-- ✅ Query-only agent
-- ✅ Monorepo structure
-- ✅ GenAI integration across API, UI, and transcription workflows
-- ✅ Automated testing
-- ✅ API documentation at `/api/openapi.json`
-- ✅ Docker setup
-- ✅ CI pipeline
-
-## 🛠️ Current Priorities
-
-- [ ] Expand unit-test coverage
-- [ ] Improve performance
-- [ ] Enrich agent search with aliases and better historical name handling
-- [ ] Add advanced search and filtering
-- [ ] Evaluate optional database-backed storage
-
----
-
 ## 📚 Documentation
 
 **Core Documentation:**
@@ -851,10 +804,6 @@ Top 25 results are returned sorted by relevance score.
 
 ---
 
-## 🔐 License
+## 📄 License
 
-[Add license info as needed]
-
----
-
-**Status:** Active development
+Freely reusable for historical, genealogical, administrative, and archival projects.
