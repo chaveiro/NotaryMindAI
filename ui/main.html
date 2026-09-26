@@ -438,6 +438,7 @@ function nearestGenealogySnap(y){
 // Initialize app after config loads
 const params = new URLSearchParams(window.location.search);
 const PROJECT_NAME = params.get("project") || "";
+const LOAD_URL = params.get("loadurl") || params.get("url") || "";
 let LOADED_PROJECT_NAME = PROJECT_NAME;
 const projectBase = () => LOADED_PROJECT_NAME ? `../projects/${LOADED_PROJECT_NAME}` : "";
 const imgUrl=img=>`${projectBase()}/imported/`+img;
@@ -2863,7 +2864,18 @@ const setupSourceModal = () => {
     if(e.target === modal && sourceModalMouseDownOnBackdrop) modal.style.display = "none";
   };
 
-  fetchProjects().then(() => {
+  fetchProjects().then(async () => {
+    if(LOAD_URL) {
+      try {
+        const data = await loadFromUrl(LOAD_URL);
+        if(data) {
+          await reloadData(data);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to load remote data from loadurl:", e);
+      }
+    }
     if(!PROJECT_NAME) openProjectPicker();
   }).catch(() => updateHeaderProjectStatus(null));
 };
