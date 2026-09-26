@@ -1866,6 +1866,15 @@ window.addEventListener("resize",refit);
       try {
         const data = await loadFromUrl(LOAD_URL);
         if(data) {
+          try {
+            await fetchProjects();
+          } catch (e) {
+            OFFLINE_MODE = true;
+            updateHeaderProjectStatus(null, true);
+          }
+          if(OFFLINE_MODE) {
+            updateHeaderProjectStatus(null, true);
+          }
           reloadData(data);
           return;
         }
@@ -1877,9 +1886,14 @@ window.addEventListener("resize",refit);
     const data = await load();
     if(!PROJECT_NAME) {
       const archiveName = document.getElementById("archiveName");
-      if(archiveName) archiveName.textContent = "No project loaded";
+      if(archiveName) {
+        archiveName.textContent = OFFLINE_MODE ? "Offline data" : "No project loaded";
+      }
       document.getElementById("empty").style.display = "block";
-      document.getElementById("empty").innerHTML = "<b>No project loaded.</b><br><br>Open Settings and choose a project from the load list.";
+      document.getElementById("empty").innerHTML = OFFLINE_MODE
+        ? "<b>Offline mode.</b><br><br>The project API is unavailable, but a remote JSON source was loaded from the URL." 
+        : "<b>No project loaded.</b><br><br>Open Settings and choose a project from the load list.";
+      if(OFFLINE_MODE) updateHeaderProjectStatus(null, true);
       return;
     }
     reloadData(data);
