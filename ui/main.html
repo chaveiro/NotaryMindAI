@@ -1939,6 +1939,7 @@ const setupSourceModal = () => {
   };
   let projectsCache = [];
   let modalSelectedProject = LOADED_PROJECT_NAME;
+  let OFFLINE_MODE = false;
 
   const archiveName = document.getElementById("archiveName");
   const archiveTooltip = document.getElementById("archiveTooltip");
@@ -1954,23 +1955,29 @@ const setupSourceModal = () => {
     });
   }
 
-  const updateHeaderProjectStatus = (project) => {
+  const updateHeaderProjectStatus = (project, offline = OFFLINE_MODE) => {
     const badge = document.getElementById("projectStatus");
     const counts = document.getElementById("statsCounts");
     const tooltip = document.getElementById("archiveTooltipContent");
     if(!badge) return;
     if(!project) {
-      if(!LOADED_PROJECT_NAME) {
+      if(!LOADED_PROJECT_NAME && !offline) {
         badge.style.display = "none";
         badge.textContent = "";
         badge.title = "";
         return;
       }
       badge.style.display = "inline-block";
-      badge.style.color = "#fbbf24";
-      badge.textContent = "⚠ Status unavailable";
-      badge.title = "The loaded project was not found in the project API.";
-      if(tooltip) tooltip.textContent += "\n⚠ Project status: unavailable";
+      badge.style.color = offline ? "#94a3b8" : "#fbbf24";
+      badge.textContent = offline ? "Offline mode" : "⚠ Status unavailable";
+      badge.title = offline
+        ? "Project API is unavailable; using local/offline data only."
+        : "The loaded project was not found in the project API.";
+      if(tooltip) {
+        tooltip.textContent = offline
+          ? "⚠ Project status: offline mode"
+          : (tooltip.textContent || "") + "\n⚠ Project status: unavailable";
+      }
       return;
     }
 
@@ -2130,12 +2137,31 @@ const setupSourceModal = () => {
   };
 
   const fetchProjects = async () => {
-    const resp = await apiFetch(`/api/projects`);
-    if(!resp.ok) throw new Error("Could not load projects");
-    const data = await resp.json();
-    projectsCache = data.projects || [];
-    updateHeaderProjectStatus(projectsCache.find(project => project.name === LOADED_PROJECT_NAME));
-    return projectsCache;
+    try {
+      const resp = await apiFetch(`/api/projects`);
+      if(!resp.ok) {
+        const statusText = `${resp.status || "unknown"}`;
+        if(resp.status === 404) {
+          OFFLINE_MODE = true;
+          updateHeaderProjectStatus(null, true);
+          return [];
+        }
+        throw new Error(`Could not load projects (${statusText})`);
+      }
+      const data = await resp.json();
+      projectsCache = data.projects || [];
+      OFFLINE_MODE = false;
+      updateHeaderProjectStatus(projectsCache.find(project => project.name === LOADED_PROJECT_NAME));
+      return projectsCache;
+    } catch (error) {
+      const message = String(error && error.message ? error.message : error || "");
+      if(/404|not found|api unavailable/i.test(message)) {
+        OFFLINE_MODE = true;
+        updateHeaderProjectStatus(null, true);
+        return [];
+      }
+      throw error;
+    }
   };
 
   const findProject = (name) => projectsCache.find(project => project.name === name);
