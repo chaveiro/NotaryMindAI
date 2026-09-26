@@ -1861,6 +1861,19 @@ window.addEventListener("resize",refit);
   try {
     await loadConfig();
     setupSourceModal();
+
+    if(LOAD_URL) {
+      try {
+        const data = await loadFromUrl(LOAD_URL);
+        if(data) {
+          reloadData(data);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to load remote data from loadurl on startup:", e);
+      }
+    }
+
     const data = await load();
     if(!PROJECT_NAME) {
       const archiveName = document.getElementById("archiveName");
